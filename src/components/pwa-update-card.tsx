@@ -7,34 +7,28 @@ import { PrimaryButton, SecondaryButton } from "@/components/forms";
 import { DeferredInstallPromptEvent } from "@/lib/pwa-install";
 
 export function PwaUpdateCard() {
-  const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
 
   useEffect(() => {
-    function handleUpdateAvailable() {
-      setUpdateAvailable(true);
-    }
-
     function refreshInstallState() {
       setCanInstall(Boolean(window.__PRINCESA_INSTALL_PROMPT__));
     }
 
     async function checkRegistration() {
       const registration = await navigator.serviceWorker?.getRegistration?.();
+      setCanInstall(Boolean(window.__PRINCESA_INSTALL_PROMPT__));
       if (registration?.waiting) {
-        setUpdateAvailable(true);
+        window.dispatchEvent(new Event("princesa:pwa-update-available"));
       }
     }
 
-    window.addEventListener("princesa:pwa-update-available", handleUpdateAvailable);
     window.addEventListener("princesa:installprompt", refreshInstallState);
     window.addEventListener("princesa:appinstalled", refreshInstallState);
     void checkRegistration();
     refreshInstallState();
 
     return () => {
-      window.removeEventListener("princesa:pwa-update-available", handleUpdateAvailable);
       window.removeEventListener("princesa:installprompt", refreshInstallState);
       window.removeEventListener("princesa:appinstalled", refreshInstallState);
     };
@@ -75,8 +69,6 @@ export function PwaUpdateCard() {
 
     await promptEvent.prompt();
   }
-
-  if (!updateAvailable) return null;
 
   return (
     <CardSection>
