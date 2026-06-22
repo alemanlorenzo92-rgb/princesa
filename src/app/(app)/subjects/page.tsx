@@ -28,12 +28,17 @@ const SUBJECT_COLOR_LABELS = {
   "#26C6DA": "Turquesa",
   "#FFD54F": "Amarillo",
   "#A1887F": "Taupe",
-  "#7986CB": "Índigo",
+  "#7986CB": "Indigo",
   "#AED581": "Lima",
   "#FFB74D": "Naranja",
   "#90A4AE": "Gris",
   "#E57373": "Rojo",
 } as const;
+
+const SUBJECT_COLOR_OPTIONS = SUBJECT_COLORS.map((color) => ({
+  value: color,
+  label: SUBJECT_COLOR_LABELS[color as keyof typeof SUBJECT_COLOR_LABELS] || "Color",
+}));
 
 const initialForm = {
   name: "",
@@ -44,9 +49,10 @@ const initialForm = {
 };
 
 export default function SubjectsPage() {
-  const { subjects, addSubject, updateSubject, deleteSubject, loading, error } =
-    useAppData();
+  const { subjects, addSubject, updateSubject, deleteSubject, loading, error } = useAppData();
   const [editing, setEditing] = useState<Subject | null>(null);
+  const [selectedColor, setSelectedColor] = useState(initialForm.color);
+  const [colorMenuOpen, setColorMenuOpen] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -114,34 +120,56 @@ export default function SubjectsPage() {
               />
             </Field>
             <Field label="Color">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                {SUBJECT_COLORS.map((color) => {
-                  const selected = (editing?.color || initialForm.color) === color;
+              <input type="hidden" name="color" value={selectedColor} />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setColorMenuOpen((value) => !value)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left"
+                >
+                  <span className="flex items-center gap-3">
+                    <span
+                      className="h-4 w-4 rounded-full ring-2 ring-white/80"
+                      style={{ backgroundColor: selectedColor }}
+                    />
+                    <span className="text-sm font-medium text-slate-700">
+                      {SUBJECT_COLOR_LABELS[selectedColor as keyof typeof SUBJECT_COLOR_LABELS] || "Color"}
+                    </span>
+                  </span>
+                  <span className="text-sm text-slate-400">{colorMenuOpen ? "Cerrar" : "Elegir"}</span>
+                </button>
 
-                  return (
-                    <label
-                      key={color}
-                      className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${
-                        selected
-                          ? "border-slate-950 bg-slate-950 text-white"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="color"
-                        value={color}
-                        defaultChecked={selected}
-                        className="sr-only"
-                      />
-                      <span
-                        className="h-4 w-4 rounded-full ring-2 ring-white/70"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span>{SUBJECT_COLOR_LABELS[color as keyof typeof SUBJECT_COLOR_LABELS]}</span>
-                    </label>
-                  );
-                })}
+                {colorMenuOpen ? (
+                  <div className="absolute z-10 mt-2 w-full rounded-3xl border border-slate-200 bg-white p-3 shadow-lg">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                      {SUBJECT_COLOR_OPTIONS.map((option) => {
+                        const selected = selectedColor === option.value;
+
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                              setSelectedColor(option.value);
+                              setColorMenuOpen(false);
+                            }}
+                            className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${
+                              selected
+                                ? "border-slate-950 bg-slate-950 text-white"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                            }`}
+                          >
+                            <span
+                              className="h-4 w-4 rounded-full ring-2 ring-white/70"
+                              style={{ backgroundColor: option.value }}
+                            />
+                            <span>{option.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </Field>
             <div className="flex gap-3">
@@ -149,7 +177,14 @@ export default function SubjectsPage() {
                 {editing ? "Guardar cambios" : "Crear materia"}
               </PrimaryButton>
               {editing ? (
-                <SecondaryButton type="button" onClick={() => setEditing(null)}>
+                <SecondaryButton
+                  type="button"
+                  onClick={() => {
+                    setEditing(null);
+                    setSelectedColor(initialForm.color);
+                    setColorMenuOpen(false);
+                  }}
+                >
                   Cancelar
                 </SecondaryButton>
               ) : null}
@@ -181,7 +216,11 @@ export default function SubjectsPage() {
                             className="h-3 w-3 rounded-full"
                             style={{ backgroundColor: subject.color }}
                           />
-                          <span>{subject.color ? SUBJECT_COLOR_LABELS[subject.color as keyof typeof SUBJECT_COLOR_LABELS] || "Color" : "Color"}</span>
+                          <span>
+                            {subject.color
+                              ? SUBJECT_COLOR_LABELS[subject.color as keyof typeof SUBJECT_COLOR_LABELS] || "Color"
+                              : "Color"}
+                          </span>
                         </div>
                         <p className="mt-1 text-sm text-slate-500">
                           {subject.professor || "Profesor sin cargar"} -{" "}
@@ -191,13 +230,17 @@ export default function SubjectsPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <SecondaryButton type="button" onClick={() => setEditing(subject)}>
-                        Editar
-                      </SecondaryButton>
                       <SecondaryButton
                         type="button"
-                        onClick={() => void deleteSubject(subject.id)}
+                        onClick={() => {
+                          setEditing(subject);
+                          setSelectedColor(subject.color || initialForm.color);
+                          setColorMenuOpen(false);
+                        }}
                       >
+                        Editar
+                      </SecondaryButton>
+                      <SecondaryButton type="button" onClick={() => void deleteSubject(subject.id)}>
                         Eliminar
                       </SecondaryButton>
                     </div>
