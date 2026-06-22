@@ -2,11 +2,11 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    id: "/dashboard",
+    id: "/dashboard?app=estudioai",
     name: "EstudioAI",
     short_name: "EstudioAI",
     description: "Organiza materias, examenes y material de estudio con IA.",
-    start_url: "/dashboard",
+    start_url: "/dashboard?app=estudioai",
     scope: "/",
     display: "standalone",
     background_color: "#f8f4ef",
