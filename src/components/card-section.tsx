@@ -10,7 +10,7 @@ export function CardSection({
   return (
     <section
       className={cn(
-        "rounded-[28px] border border-white/50 bg-white/82 p-5 shadow-soft backdrop-blur",
+        "animate-soft-scale-in rounded-[28px] border border-white/50 bg-white/82 p-5 shadow-soft backdrop-blur motion-reduce:animate-none",
         className,
       )}
     >

@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto flex min-h-screen max-w-7xl flex-col bg-[radial-gradient(circle_at_top,_rgba(248,244,239,0.9),_rgba(255,255,255,0.95)_42%,_rgba(241,240,247,0.95)_100%)] lg:flex-row">
       <aside className="hidden w-80 shrink-0 border-r border-slate-200/80 bg-white/65 p-6 backdrop-blur lg:block">
-        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-soft">
+        <div className="animate-soft-scale-in rounded-[28px] border border-slate-200 bg-white p-5 shadow-soft motion-reduce:animate-none">
           <div className="flex items-center gap-3">
             <Image src="/logo.svg" alt="EstudioAI" width={56} height={56} className="rounded-2xl" />
             <div>
@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition",
+                  "flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition duration-200 hover:-translate-y-0.5",
                   active
                     ? "border-sky-200 bg-sky-50 text-sky-900 shadow-soft"
                     : "border-transparent text-slate-600 hover:border-slate-200 hover:bg-white hover:text-slate-950",
@@ -68,7 +68,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col">
-        <main className="flex-1 px-4 pb-28 pt-4 sm:px-6 lg:px-10 lg:pb-10 lg:pt-10">{children}</main>
+        <main className="flex-1 px-4 pb-28 pt-4 sm:px-6 lg:px-10 lg:pb-10 lg:pt-10">
+          <div className="animate-fade-up motion-reduce:animate-none">{children}</div>
+        </main>
         <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/92 px-2 py-3 backdrop-blur lg:hidden">
           <div
             className="mx-auto grid max-w-xl gap-1"
@@ -80,14 +82,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition",
-                    active
-                      ? "bg-sky-100 text-sky-900"
-                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-                  )}
-                >
+                href={item.href}
+                className={cn(
+                  "flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition duration-200",
+                  active
+                    ? "bg-sky-100 text-sky-900 shadow-soft"
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+                )}
+              >
                   <Icon className="h-4 w-4" />
                   <span>{item.label}</span>
                 </Link>
