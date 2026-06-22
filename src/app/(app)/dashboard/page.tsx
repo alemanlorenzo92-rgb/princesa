@@ -30,10 +30,10 @@ export default function DashboardPage() {
         description="Tu semana académica resumida, con foco en lo urgente y accesos rápidos."
         action={
           <Link
-            href="/study"
-            className="rounded-2xl bg-coral-500 px-4 py-3 text-sm font-semibold text-white"
+            href="/settings"
+            className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white"
           >
-            Abrir Estudio
+            Mejorar plan
           </Link>
         }
       />
@@ -49,7 +49,7 @@ export default function DashboardPage() {
         <CardSection>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-950">Proximos eventos</h2>
+              <h2 className="text-lg font-semibold text-slate-950">Próximos eventos</h2>
               <p className="mt-1 text-sm text-slate-500">Exámenes, entregas y recordatorios relevantes.</p>
             </div>
             <Link href="/calendar" className="text-sm font-semibold text-slate-900">
@@ -80,7 +80,7 @@ export default function DashboardPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-slate-900">{event.title}</p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">
+                          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">
                             {EVENT_TYPE_LABELS[event.type]}
                           </p>
                         </div>
@@ -135,6 +135,9 @@ export default function DashboardPage() {
               </Link>
               <Link href="/study" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
                 Ir a Estudio
+              </Link>
+              <Link href="/settings" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900">
+                Ver planes con descuento
               </Link>
               <Link href="/materials" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
                 Ver materiales

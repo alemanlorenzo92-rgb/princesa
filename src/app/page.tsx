@@ -54,6 +54,9 @@ export default function HomePage() {
             EstudioAI combina materias, calendario, apuntes y generacion con IA en una experiencia
             pensada como app nativa.
           </p>
+          <div className="mt-5 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
+            Ahorrá $3.000 por plan con el descuento de lanzamiento.
+          </div>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
@@ -67,6 +70,12 @@ export default function HomePage() {
               className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700"
             >
               {user ? "Abrir Estudio" : "Ya tengo cuenta"}
+            </Link>
+            <Link
+              href={user ? "/settings" : "/register"}
+              className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-900"
+            >
+              {user ? "Mejorar plan" : "Ver planes con descuento"}
             </Link>
           </div>
         </div>
