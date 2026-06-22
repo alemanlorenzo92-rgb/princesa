@@ -16,6 +16,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!mounted || loading) return;
     if (!user) {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      return;
+    }
+
+    const onboardingDone = window.localStorage.getItem("estudioai_onboarding_done") === "true";
+    if (!onboardingDone && pathname !== "/welcome") {
+      router.replace(`/welcome?next=${encodeURIComponent(pathname)}`);
     }
   }, [loading, mounted, pathname, router, user]);
 

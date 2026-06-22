@@ -25,7 +25,7 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
         String(formData.get("email") || ""),
         String(formData.get("password") || ""),
       );
-      router.push(nextPath || "/dashboard");
+      router.push(`/welcome?next=${encodeURIComponent(nextPath || "/dashboard")}`);
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
