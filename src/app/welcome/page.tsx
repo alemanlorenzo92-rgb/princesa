@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { BillingPlanCards } from "@/components/billing-plan-cards";
 import { CardSection } from "@/components/card-section";
-import { PrimaryButton, SecondaryButton } from "@/components/forms";
+import { PrimaryButton } from "@/components/forms";
 import { getPlanConfig } from "@/lib/plans";
 
 const FEATURES = [
@@ -24,20 +24,21 @@ export default function WelcomePage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl items-center px-4 py-10 sm:px-6 lg:px-10">
-      <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+    <main className="mx-auto min-h-screen max-w-7xl px-4 py-8 sm:px-6 lg:px-10">
+      <div className="grid gap-6">
         <CardSection className="p-7 sm:p-9">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-coral-600">EstudioAI</p>
           <h1 className="mt-3 text-3xl font-semibold text-slate-950 sm:text-4xl">
             Bienvenido. Primero te mostramos cómo funciona.
           </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
             Antes de entrar a tu espacio de estudio, te mostramos lo esencial para que empieces con claridad.
+            Después elegís: seguir gratis o comprar un plan.
           </p>
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
             {FEATURES.map((feature) => (
-              <div key={feature} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <div key={feature} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
                 {feature}
               </div>
             ))}
@@ -54,13 +55,10 @@ export default function WelcomePage() {
             <PrimaryButton type="button" onClick={continueWithFreePlan} className="sm:min-w-56">
               Continuar con plan gratis
             </PrimaryButton>
-            <SecondaryButton type="button" onClick={() => document.getElementById("paid-plans")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="sm:min-w-56">
-              Ver planes pagos
-            </SecondaryButton>
           </div>
         </CardSection>
 
-        <div className="grid gap-4">
+        <div className="grid gap-4 lg:grid-cols-2">
           <CardSection>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Qué vas a encontrar</p>
             <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
@@ -78,18 +76,20 @@ export default function WelcomePage() {
             </p>
           </CardSection>
         </div>
-      </div>
 
-      <section id="paid-plans" className="mt-6 space-y-4">
-        <div className="rounded-[28px] border border-white/60 bg-white/85 p-5 shadow-soft backdrop-blur">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-coral-600">Elegí cómo seguir</p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Comprar un plan o seguir gratis</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Acá podés comparar rápido y decidir sin salir de la bienvenida. Si no querés pagar ahora, seguí con el plan gratis.
-          </p>
-        </div>
-        <BillingPlanCards />
-      </section>
+        <section className="space-y-4">
+          <div className="rounded-[28px] border border-white/60 bg-white/85 p-5 shadow-soft backdrop-blur">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-coral-600">Elegí cómo seguir</p>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Comprar un plan o seguir gratis</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Compará los 3 planes acá abajo y decidí sin salir de la bienvenida.
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-[32px]">
+            <BillingPlanCards />
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
