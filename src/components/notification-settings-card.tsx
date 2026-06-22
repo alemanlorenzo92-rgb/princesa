@@ -307,7 +307,7 @@ export function NotificationSettingsCard() {
 
   const installHint = isInstalled
     ? "Estás usando la app instalada. Desde aquí podés activar las notificaciones."
-    : "Descarga la app en tu celular para activar notificaciones más estables y confiables.";
+    : "Descargá la app en tu celular para activar notificaciones más estables y confiables.";
 
   const mobileNotificationsAllowed = isMobile && isInstalled;
 
@@ -328,7 +328,8 @@ export function NotificationSettingsCard() {
           <p className="font-semibold text-slate-900">Solo celular</p>
           <p className="mt-1">
             Las notificaciones push quedaron pensadas solo para la app instalada en
-            el celular. En la computadora verás la app, pero sin activar avisos.
+            el celular. En la computadora verás la app, pero no vas a poder
+            activar avisos.
           </p>
         </div>
       ) : null}
