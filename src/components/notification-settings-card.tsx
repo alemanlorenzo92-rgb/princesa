@@ -7,6 +7,7 @@ import { PrimaryButton, SecondaryButton } from "@/components/forms";
 import {
   DeferredInstallPromptEvent,
   isIosDevice,
+  isMobileDevice,
   isStandaloneMode,
 } from "@/lib/pwa-install";
 import { getPublicRuntimeConfig } from "@/lib/public-runtime";
@@ -34,6 +35,7 @@ export function NotificationSettingsCard() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const [isIos, setIsIos] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -44,6 +46,7 @@ export function NotificationSettingsCard() {
       setIsInstalled(isStandaloneMode());
       setCanInstall(Boolean(window.__PRINCESA_INSTALL_PROMPT__));
       setIsIos(isIosDevice());
+      setIsMobile(isMobileDevice());
     }
 
     refreshInstallState();
@@ -304,7 +307,9 @@ export function NotificationSettingsCard() {
 
   const installHint = isInstalled
     ? "Estás usando la app instalada. Desde aquí podés activar las notificaciones."
-    : "Descarga la app para activar notificaciones más estables y confiables.";
+    : "Descarga la app en tu celular para activar notificaciones más estables y confiables.";
+
+  const mobileNotificationsAllowed = isMobile && isInstalled;
 
   return (
     <CardSection>
@@ -317,6 +322,16 @@ export function NotificationSettingsCard() {
       <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         {installHint}
       </div>
+
+      {!mobileNotificationsAllowed ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+          <p className="font-semibold text-slate-900">Solo celular</p>
+          <p className="mt-1">
+            Las notificaciones push quedaron pensadas solo para la app instalada en
+            el celular. En la computadora verás la app, pero sin activar avisos.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-4 space-y-2 text-sm text-slate-600">
         <p>Modo actual: {installationStatus}</p>
@@ -346,41 +361,47 @@ export function NotificationSettingsCard() {
       {error ? <p className="mt-4 text-sm text-rose-600">{error}</p> : null}
 
       <div className="mt-5 flex flex-wrap gap-3">
-        <PrimaryButton
-          type="button"
-          onClick={installApp}
-          disabled={loading || busy || isInstalled || !canInstall}
-        >
-          Instalar app
-        </PrimaryButton>
-        <PrimaryButton
-          type="button"
-          onClick={enableNotifications}
-          disabled={!supported || loading || busy || enabled}
-        >
-          Activar notificaciones
-        </PrimaryButton>
-        <SecondaryButton
-          type="button"
-          onClick={disableNotifications}
-          disabled={!supported || loading || busy || !enabled}
-        >
-          Desactivar
-        </SecondaryButton>
-        <SecondaryButton
-          type="button"
-          onClick={resetNotifications}
-          disabled={!supported || loading || busy}
-        >
-          Reiniciar notificaciones
-        </SecondaryButton>
-        <SecondaryButton
-          type="button"
-          onClick={sendTestNotification}
-          disabled={!supported || loading || busy || !enabled}
-        >
-          Enviar prueba
-        </SecondaryButton>
+        {isMobile && !isInstalled ? (
+          <PrimaryButton
+            type="button"
+            onClick={installApp}
+            disabled={loading || busy || isInstalled || !canInstall}
+          >
+            Instalar app
+          </PrimaryButton>
+        ) : null}
+        {mobileNotificationsAllowed ? (
+          <>
+            <PrimaryButton
+              type="button"
+              onClick={enableNotifications}
+              disabled={!supported || loading || busy || enabled}
+            >
+              Activar notificaciones
+            </PrimaryButton>
+            <SecondaryButton
+              type="button"
+              onClick={disableNotifications}
+              disabled={!supported || loading || busy || !enabled}
+            >
+              Desactivar
+            </SecondaryButton>
+            <SecondaryButton
+              type="button"
+              onClick={resetNotifications}
+              disabled={!supported || loading || busy}
+            >
+              Reiniciar notificaciones
+            </SecondaryButton>
+            <SecondaryButton
+              type="button"
+              onClick={sendTestNotification}
+              disabled={!supported || loading || busy || !enabled}
+            >
+              Enviar prueba
+            </SecondaryButton>
+          </>
+        ) : null}
       </div>
     </CardSection>
   );

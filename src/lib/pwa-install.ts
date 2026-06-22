@@ -34,3 +34,11 @@ export function isIosDevice() {
 
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 }
+
+export function isMobileDevice() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return /android|iphone|ipad|ipod|mobile/i.test(window.navigator.userAgent);
+}
