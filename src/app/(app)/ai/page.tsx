@@ -238,7 +238,7 @@ export default function AiPage() {
       <PageHeader
         eyebrow="IA"
         title="Generador de material de estudio"
-        description="Todo el uso de IA pasa por OpenAI API desde el backend y respeta el plan activo del usuario."
+        description="Elegí una materia, un archivo o texto propio y generá material con el plan activo."
       />
 
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
@@ -249,14 +249,14 @@ export default function AiPage() {
               : planConfig.label}
           </p>
           <p className="mt-2 text-2xl font-semibold text-slate-950">
-            {planId === "expired_trial" ? "Tu prueba gratuita termino" : planConfig.label}
+            {planId === "expired_trial" ? "Tu prueba gratuita terminó" : planConfig.label}
           </p>
           <p className="mt-3 text-sm text-slate-600">
             {planId === "trial"
               ? "La prueba gratuita se entrega una sola vez, se consume progresivamente y no se renueva."
               : planId === "expired_trial"
-                ? "Ya no tienes IA disponible sin un plan pago."
-                : "Tus limites de IA se renuevan mensualmente mientras el plan este activo."}
+                ? "Ya no tenés IA disponible sin un plan pago."
+                : "Tus límites de IA se renuevan mensualmente mientras el plan esté activo."}
           </p>
           {planId === "expired_trial" ? (
             <Link
@@ -304,7 +304,7 @@ export default function AiPage() {
         </CardSection>
 
         <CardSection>
-          <p className="text-sm text-slate-500">Funciones disponibles</p>
+            <p className="text-sm text-slate-500">Funciones disponibles</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {planConfig.features.length ? (
               planConfig.features.map((feature) => (
@@ -320,16 +320,16 @@ export default function AiPage() {
             )}
           </div>
           <p className="mt-4 text-sm text-slate-500">
-            Maximo por request: {planConfig.requestInputTokensLimit} tokens de entrada y {planConfig.requestOutputTokensLimit} de salida.
+            Máximo por request: {planConfig.requestInputTokensLimit} tokens de entrada y {planConfig.requestOutputTokensLimit} de salida.
           </p>
         </CardSection>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <CardSection>
-          <h2 className="text-lg font-semibold text-slate-950">Configurar generacion</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Configurar generación</h2>
           <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
-            <Field label="Titulo del material">
+            <Field label="Título del material">
               <input name="title" required placeholder="Resumen parcial unidad 2" className={inputClassName()} />
             </Field>
             <Field label="Materia">
@@ -376,15 +376,15 @@ export default function AiPage() {
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
                 <p className="font-medium text-slate-900">{linkedDocument.title}</p>
                 <p className="mt-2">
-                  Prioridad de fuente: texto manual del formulario, luego `extracted_text`, y despues `manual_text` del archivo.
+                  Prioridad de fuente: texto manual del formulario, luego `extracted_text`, y después `manual_text` del archivo.
                 </p>
                 {hasExtractedText(linkedDocument) ? (
                   <p className="mt-2 text-slate-600">
-                    Texto extraido disponible: {linkedDocument.extractedText?.length || 0} caracteres.
+                    Texto extraído disponible: {linkedDocument.extractedText?.length || 0} caracteres.
                   </p>
                 ) : linkedDocument.filePath ? (
                   <p className="mt-2 text-amber-700">
-                    Este PDF todavia no tiene texto extraido.
+                    Este PDF todavía no tiene texto extraído.
                   </p>
                 ) : null}
                 {!hasExtractedText(linkedDocument) && linkedDocument.sourceText ? (
@@ -441,15 +441,15 @@ export default function AiPage() {
                 </select>
               </Field>
             </div>
-            <Field label="Texto base manual">
+              <Field label="Texto base manual">
               <textarea
                 name="manualText"
-                placeholder="Si no eliges archivo, pega aqui el contenido de clase o tus apuntes."
+                placeholder="Si no elegís archivo, pegá acá el contenido de clase o tus apuntes."
                 className={textareaClassName("min-h-56")}
               />
             </Field>
             <p className="text-xs text-slate-500">
-              Estimacion rapida: aproximadamente 1 token cada 4 caracteres.
+              Estimación rápida: aproximadamente 1 token cada 4 caracteres.
             </p>
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <PrimaryButton type="submit" disabled={loading || isBlocked}>
@@ -490,8 +490,8 @@ export default function AiPage() {
           ) : (
             <div className="mt-5">
               <EmptyState
-                title="Todavia no generaste material"
-                description="Completa el formulario y obtendras materiales segun el plan y el cupo de IA disponible."
+                title="Todavía no generaste material"
+                description="Completá el formulario y obtendrás materiales según el plan y el cupo de IA disponible."
               />
             </div>
           )}

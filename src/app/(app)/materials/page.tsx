@@ -27,14 +27,14 @@ export default function MaterialsPage() {
       <PageHeader
         eyebrow="Biblioteca"
         title="Materiales guardados"
-        description="Consulta, edita, elimina y exporta todos los materiales generados dentro de cada materia."
+        description="Revisá, editá, eliminá y exportá tus materiales sin salir de tu biblioteca."
       />
 
       {editing ? (
         <CardSection className="mb-4">
           <h2 className="text-lg font-semibold text-slate-950">Editar material</h2>
           <div className="mt-4 space-y-4">
-            <Field label="Titulo">
+            <Field label="Título">
               <input
                 value={editing.title}
                 onChange={(event) => setEditing({ ...editing, title: event.target.value })}
@@ -103,12 +103,12 @@ export default function MaterialsPage() {
                         onClick={() =>
                           exportMaterialToPdf({
                             appName: "EstudioAI",
-                            subjectName: subject?.name || "Materia sin nombre",
-                            title: material.title,
-                            createdAt: formatDate(material.createdAt),
-                            content: material.content,
-                          })
-                        }
+                          subjectName: subject?.name || "Materia sin nombre",
+                          title: material.title,
+                          createdAt: formatDate(material.createdAt),
+                          content: material.content,
+                        })
+                      }
                       >
                         PDF
                       </SecondaryButton>
@@ -127,7 +127,7 @@ export default function MaterialsPage() {
         {!error && !loading && !materials.length ? (
           <EmptyState
             title="No hay materiales guardados"
-            description="Genera tu primer resumen desde la pantalla IA y aparecera aqui."
+            description="Generá tu primer resumen desde la pantalla de IA y aparecerá acá."
           />
         ) : null}
       </div>

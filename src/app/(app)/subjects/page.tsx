@@ -56,7 +56,7 @@ export default function SubjectsPage() {
       <PageHeader
         eyebrow="Materias"
         title="Mis materias"
-        description="Crea, edita y organiza cada materia con profesor, horario, descripcion y color."
+        description="Creá, editá y organizá cada materia con profesor, horario, descripción y color."
       />
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
@@ -83,12 +83,12 @@ export default function SubjectsPage() {
             <Field label="Horario">
               <input
                 name="schedule"
-                placeholder="Lunes y miercoles 18:00"
+                placeholder="Lunes y miércoles 18:00"
                 defaultValue={editing?.schedule || initialForm.schedule}
                 className={inputClassName()}
               />
             </Field>
-            <Field label="Descripcion">
+            <Field label="Descripción">
               <textarea
                 name="description"
                 defaultValue={editing?.description || initialForm.description}
@@ -170,8 +170,8 @@ export default function SubjectsPage() {
             : null}
           {!error && !loading && !subjects.length ? (
             <EmptyState
-              title="No hay materias todavia"
-              description="Crea tu primera materia para vincular eventos, archivos y materiales generados."
+              title="Todavía no hay materias"
+              description="Creá tu primera materia para vincular eventos, archivos y materiales generados."
             />
           ) : null}
         </div>

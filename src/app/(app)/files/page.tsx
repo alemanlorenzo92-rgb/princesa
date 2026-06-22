@@ -167,7 +167,7 @@ export default function FilesPage() {
       <PageHeader
         eyebrow="Archivos"
         title="PDFs y apuntes"
-        description="Sube material de estudio o pega texto para reutilizarlo en el generador IA."
+        description="Subí material de estudio o pegá texto para reutilizarlo en el generador de IA."
       />
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
@@ -184,10 +184,10 @@ export default function FilesPage() {
                 ))}
               </select>
             </Field>
-            <Field label="Titulo">
+            <Field label="Título">
               <input name="title" required className={inputClassName()} />
             </Field>
-            <Field label="Descripcion">
+            <Field label="Descripción">
               <textarea name="description" className={textareaClassName()} />
             </Field>
             <Field label="PDF opcional">
@@ -203,7 +203,7 @@ export default function FilesPage() {
             <Field label="Texto o apunte">
               <textarea
                 name="sourceText"
-                placeholder="Pega aqui texto del PDF, apuntes o fragmentos de clase. Si no subes PDF, este texto sigue funcionando como fuente para IA."
+                placeholder="Pegá acá texto del PDF, apuntes o fragmentos de clase. Si no subís PDF, este texto sigue funcionando como fuente para IA."
                 className={textareaClassName("min-h-40")}
               />
             </Field>
@@ -235,7 +235,7 @@ export default function FilesPage() {
                       <div>
                         <p className="text-lg font-semibold text-slate-950">{document.title}</p>
                         <p className="mt-1 text-sm text-slate-500">
-                          {subject?.name || "Sin materia"} - {formatDate(document.createdAt)}
+                          {subject?.name || "Sin materia"} · {formatDate(document.createdAt)}
                         </p>
                         <p className="mt-3 text-sm text-slate-600">
                           {truncateText(document.description || "Sin descripcion")}
@@ -244,21 +244,21 @@ export default function FilesPage() {
                           {document.filePath
                             ? `PDF privado: ${document.fileName || "archivo.pdf"}`
                             : "Apunte manual"}{" "}
-                          -{" "}
+                          ·{" "}
                           {hasExtractedText(document)
-                            ? "Texto extraido listo"
+                            ? "Texto extraído listo"
                             : document.filePath
-                              ? "Sin texto extraido"
+                              ? "Sin texto extraído"
                               : "Listo para usar con texto manual"}
                         </p>
                         {document.filePath && !hasExtractedText(document) ? (
                           <p className="mt-2 text-sm text-amber-700">
-                            Este PDF todavia no tiene texto extraido.
+                            Este PDF todavía no tiene texto extraído.
                           </p>
                         ) : null}
                         {hasExtractedText(document) ? (
                           <p className="mt-2 text-sm text-slate-500">
-                            Texto extraido: {document.extractedText?.length || 0} caracteres.
+                            Texto extraído: {document.extractedText?.length || 0} caracteres.
                           </p>
                         ) : null}
                         {document.extractedText ? (

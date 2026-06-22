@@ -1,10 +1,10 @@
-# Proyecto Princesa
+# EstudioAI
 
 Aplicacion web mobile-first para estudiantes que organiza materias, archivos y estudio con IA, usando Supabase, OpenAI API y Mercado Pago, lista para salir como app full-stack en Railway.
 
 ## Descripcion corta
 
-Proyecto Princesa centraliza autenticacion, gestion academica, archivos PDF reales, materiales de estudio generados con IA y planes pagos, con una base lista para deploy en Railway y uso desde celular como PWA.
+EstudioAI centraliza autenticacion, gestion academica, archivos PDF reales, materiales de estudio generados con IA y planes pagos, con una base lista para deploy en Railway y uso desde celular como PWA.
 
 ## Funcionalidades actuales
 

@@ -41,11 +41,11 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
     <main className="mx-auto flex min-h-screen max-w-md items-center px-4 py-10">
       <CardSection className="w-full p-7 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-coral-600">
-          Bienvenida
+          EstudioAI
         </p>
         <h1 className="mt-3 text-3xl font-semibold text-slate-950">Iniciar sesion</h1>
         <p className="mt-2 text-sm text-slate-600">
-          El acceso ahora usa Supabase Auth con persistencia de sesion y validacion segura.
+          Accede a tu estudio, materias, archivos y herramientas de IA desde una sola cuenta.
         </p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -73,7 +73,7 @@ export function LoginForm({ nextPath }: { nextPath?: string }) {
         <p className="mt-5 text-sm text-slate-600">
           Todavia no tenes cuenta?{" "}
           <Link href="/register" className="font-semibold text-slate-950">
-            Registrate
+            Crear cuenta
           </Link>
         </p>
       </CardSection>

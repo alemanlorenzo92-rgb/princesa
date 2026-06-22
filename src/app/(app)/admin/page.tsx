@@ -34,7 +34,7 @@ export default async function AdminPage() {
       <PageHeader
         eyebrow="Admin"
         title="Panel administrativo"
-        description="Vista interna de usuarios, planes, actividad de IA, pagos y acceso reciente."
+        description="Vista interna de usuarios, planes, actividad de IA, pagos y accesos recientes."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -44,9 +44,9 @@ export default async function AdminPage() {
           helper={`${data.summary.adminUsers} administradores configurados.`}
         />
         <StatCard
-          label="Inicios ultimos 7 dias"
+          label="Inicios últimos 7 días"
           value={formatNumber(data.summary.signInsLast7Days)}
-          helper="Usuarios que iniciaron sesion recientemente."
+          helper="Usuarios que iniciaron sesión recientemente."
           accent="from-sky-400 to-cyan-300"
         />
         <StatCard
@@ -69,7 +69,7 @@ export default async function AdminPage() {
             <div>
               <h2 className="text-lg font-semibold text-slate-950">Estado de planes</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Distribucion actual entre trial, student, pro y trial vencido.
+                Distribución actual entre trial, student, pro y trial vencido.
               </p>
             </div>
             <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-slate-700">
@@ -106,7 +106,7 @@ export default async function AdminPage() {
         </CardSection>
 
         <CardSection>
-          <h2 className="text-lg font-semibold text-slate-950">Usuarios con mas consumo</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Usuarios con más consumo</h2>
           <p className="mt-1 text-sm text-slate-500">
             Ranking mensual para detectar cuentas intensivas y revisar costos.
           </p>
@@ -133,7 +133,7 @@ export default async function AdminPage() {
               ))
             ) : (
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-                Todavia no hay consumo de IA registrado para este mes.
+                Todavía no hay consumo de IA registrado para este mes.
               </div>
             )}
           </div>
@@ -144,7 +144,7 @@ export default async function AdminPage() {
         <CardSection>
           <h2 className="text-lg font-semibold text-slate-950">Usuarios recientes</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Altas, plan actual, confirmacion de email y ultimo acceso.
+            Altas, plan actual, confirmación de email y último acceso.
           </p>
 
           <div className="mt-5 overflow-x-auto">
@@ -155,7 +155,7 @@ export default async function AdminPage() {
                   <th className="pb-3 font-medium">Rol</th>
                   <th className="pb-3 font-medium">Plan</th>
                   <th className="pb-3 font-medium">Creado</th>
-                  <th className="pb-3 font-medium">Ultimo login</th>
+                  <th className="pb-3 font-medium">Último login</th>
                 </tr>
               </thead>
               <tbody className="align-top">
@@ -184,9 +184,9 @@ export default async function AdminPage() {
         </CardSection>
 
         <CardSection>
-          <h2 className="text-lg font-semibold text-slate-950">Ultimos inicios de sesion</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Últimos inicios de sesión</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Historial rapido de los accesos mas recientes detectados por Supabase Auth.
+            Historial rápido de los accesos más recientes detectados por Supabase Auth.
           </p>
 
           <div className="mt-5 space-y-3">
@@ -210,7 +210,7 @@ export default async function AdminPage() {
               ))
             ) : (
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-                Supabase todavia no devolvio inicios de sesion recientes.
+                Supabase todavía no devolvió inicios de sesión recientes.
               </div>
             )}
           </div>
@@ -221,7 +221,7 @@ export default async function AdminPage() {
         <CardSection>
           <h2 className="text-lg font-semibold text-slate-950">Actividad reciente de IA</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Ultimas operaciones registradas con tokens, feature y modelo usado.
+            Últimas operaciones registradas con tokens, feature y modelo usado.
           </p>
 
           <div className="mt-5 space-y-3">
@@ -232,7 +232,7 @@ export default async function AdminPage() {
                     <div>
                       <p className="text-sm font-semibold text-slate-950">{entry.email}</p>
                       <p className="mt-1 text-xs text-slate-500">
-                        {entry.featureKey} • {entry.model}
+                        {entry.featureKey} · {entry.model}
                       </p>
                     </div>
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">
@@ -248,7 +248,7 @@ export default async function AdminPage() {
               ))
             ) : (
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-                Aun no hay actividad de IA para mostrar.
+                Aún no hay actividad de IA para mostrar.
               </div>
             )}
           </div>
@@ -257,7 +257,7 @@ export default async function AdminPage() {
         <CardSection>
           <h2 className="text-lg font-semibold text-slate-950">Eventos de cobro recientes</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Seguimiento de pagos y webhooks asociados a la facturacion.
+            Seguimiento de pagos y webhooks asociados a la facturación.
           </p>
 
           <div className="mt-5 space-y-3">
@@ -268,7 +268,7 @@ export default async function AdminPage() {
                     <div>
                       <p className="text-sm font-semibold text-slate-950">{entry.email}</p>
                       <p className="mt-1 text-xs text-slate-500">
-                        {entry.provider} • pago {entry.paymentId || "-"}
+                        {entry.provider} · pago {entry.paymentId || "-"}
                       </p>
                     </div>
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">
@@ -283,7 +283,7 @@ export default async function AdminPage() {
               ))
             ) : (
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-                Todavia no hay eventos de billing guardados.
+                Todavía no hay eventos de billing guardados.
               </div>
             )}
           </div>

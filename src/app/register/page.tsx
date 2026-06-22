@@ -59,11 +59,11 @@ export default function RegisterPage() {
     <main className="mx-auto flex min-h-screen max-w-md items-center px-4 py-10">
       <CardSection className="w-full p-7 sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-coral-600">
-          Primera vez
+          EstudioAI
         </p>
         <h1 className="mt-3 text-3xl font-semibold text-slate-950">Crear cuenta</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Empeza con tu perfil de estudiante y crea tu espacio personal de estudio.
+          Empezá con tu perfil de estudiante y creá tu espacio personal de estudio.
         </p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -105,7 +105,7 @@ export default function RegisterPage() {
         <p className="mt-5 text-sm text-slate-600">
           Ya tenes cuenta?{" "}
           <Link href="/login" className="font-semibold text-slate-950">
-            Inicia sesion
+            Iniciar sesion
           </Link>
         </p>
       </CardSection>

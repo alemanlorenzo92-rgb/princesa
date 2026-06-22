@@ -111,7 +111,7 @@ export default function ChatPage() {
     try {
       setError("");
       const conversation = await createChatConversation({
-        title: "Nueva conversacion",
+        title: "Nueva conversación",
         subjectId: selectedSubjectId || undefined,
         fileId: selectedFileId || undefined,
       });
@@ -121,13 +121,13 @@ export default function ChatPage() {
       setError(
         createError instanceof Error
           ? createError.message
-          : "No se pudo crear la conversacion.",
+          : "No se pudo crear la conversación.",
       );
     }
   }
 
   async function handleRenameConversation(conversationId: string, currentTitle: string) {
-    const nextTitle = window.prompt("Nuevo titulo para la conversacion", currentTitle)?.trim();
+    const nextTitle = window.prompt("Nuevo título para la conversación", currentTitle)?.trim();
     if (!nextTitle) return;
 
     try {
@@ -138,7 +138,7 @@ export default function ChatPage() {
       setError(
         renameError instanceof Error
           ? renameError.message
-          : "No se pudo renombrar la conversacion.",
+          : "No se pudo renombrar la conversación.",
       );
     }
   }
@@ -157,7 +157,7 @@ export default function ChatPage() {
       setError(
         deleteError instanceof Error
           ? deleteError.message
-          : "No se pudo eliminar la conversacion.",
+          : "No se pudo eliminar la conversación.",
       );
     }
   }
@@ -199,17 +199,17 @@ export default function ChatPage() {
       <PageHeader
         eyebrow="IA"
         title="Chat de estudio"
-        description="Haz preguntas generales, sobre una materia o sobre un PDF/apunte usando OpenAI API desde el backend."
+        description="Hacé preguntas sobre una materia, un PDF o un apunte y seguí la conversación desde un solo lugar."
         action={
           <PrimaryButton type="button" onClick={() => void handleCreateConversation()}>
-            Nueva conversacion
+            Nueva conversación
           </PrimaryButton>
         }
       />
 
       {planId === "expired_trial" ? (
         <CardSection>
-          <p className="text-lg font-semibold text-slate-950">Tu prueba gratuita de IA ya termino</p>
+          <p className="text-lg font-semibold text-slate-950">Tu prueba gratuita de IA ya terminó</p>
           <p className="mt-2 text-sm text-slate-600">
             Mejora tu plan para seguir usando el chat de estudio.
           </p>
@@ -274,7 +274,7 @@ export default function ChatPage() {
                   ? "Este chat usara el texto extraido del PDF como contexto."
                   : selectedFile.sourceText?.trim()
                     ? "Este chat usara el apunte manual guardado como contexto."
-                    : "Ese archivo todavia no tiene texto disponible para el chat."}
+                  : "Ese archivo todavía no tiene texto disponible para el chat."}
               </div>
             ) : null}
 
@@ -346,7 +346,7 @@ export default function ChatPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">
-                {selectedConversation?.title || "Nueva conversacion"}
+                {selectedConversation?.title || "Nueva conversación"}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
                 Historial reciente y respuestas guardadas por usuario.
@@ -399,7 +399,7 @@ export default function ChatPage() {
               ))
             ) : (
               <EmptyState
-                title="Sin mensajes todavia"
+                title="Sin mensajes todavía"
                 description="Haz una consulta para crear o continuar esta conversacion."
               />
             )}
@@ -411,11 +411,11 @@ export default function ChatPage() {
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 className={inputClassName("min-h-32 resize-y")}
-                placeholder="Pregunta algo sobre una materia, un apunte o un PDF."
+                placeholder="Preguntá algo sobre una materia, un apunte o un PDF."
               />
             </Field>
             <p className="text-xs text-slate-500">
-              No hay busqueda semantica ni vectorial todavia. Para PDFs largos, el contexto se recorta segun tu plan.
+              No hay búsqueda semántica ni vectorial todavía. Para PDFs largos, el contexto se recorta según tu plan.
             </p>
             <PrimaryButton
               type="submit"

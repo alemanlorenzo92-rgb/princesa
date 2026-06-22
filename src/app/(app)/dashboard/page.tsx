@@ -27,7 +27,7 @@ export default function DashboardPage() {
       <PageHeader
         eyebrow="Dashboard"
         title={`Hola, ${user?.name || "estudiante"}`}
-        description="Tu semana academica resumida, con foco en proximos vencimientos y accesos rapidos."
+        description="Tu semana académica resumida, con foco en lo urgente y accesos rápidos."
         action={
           <Link
             href="/study"
@@ -40,9 +40,9 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Materias activas" value={subjects.length} helper="Tus materias registradas." />
-        <StatCard label="Proximos eventos" value={upcomingEvents.length} helper="Lo mas urgente a la vista." accent="from-sky-400 to-cyan-300" />
+        <StatCard label="Próximos eventos" value={upcomingEvents.length} helper="Lo más urgente a la vista." accent="from-sky-400 to-cyan-300" />
         <StatCard label="Archivos cargados" value={documents.length} helper="PDFs y apuntes vinculados." accent="from-emerald-400 to-teal-300" />
-        <StatCard label="Materiales IA" value={materials.length} helper="Resumenes y guias guardadas." accent="from-violet-400 to-fuchsia-300" />
+        <StatCard label="Materiales IA" value={materials.length} helper="Resúmenes y guías guardadas." accent="from-violet-400 to-fuchsia-300" />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -50,7 +50,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">Proximos eventos</h2>
-              <p className="mt-1 text-sm text-slate-500">Examenes, entregas y recordatorios relevantes.</p>
+              <p className="mt-1 text-sm text-slate-500">Exámenes, entregas y recordatorios relevantes.</p>
             </div>
             <Link href="/calendar" className="text-sm font-semibold text-slate-900">
               Ver calendario
@@ -80,7 +80,7 @@ export default function DashboardPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-slate-900">{event.title}</p>
-                          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">
+                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-400">
                             {EVENT_TYPE_LABELS[event.type]}
                           </p>
                         </div>
@@ -89,8 +89,8 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <p className="mt-3 text-sm text-slate-600">
-                        {subject?.name || "Sin materia"} - {formatDate(event.date)}
-                        {event.time ? ` - ${event.time}` : ""}
+                        {subject?.name || "Sin materia"} · {formatDate(event.date)}
+                        {event.time ? ` · ${event.time}` : ""}
                       </p>
                     </article>
                   );
@@ -98,8 +98,8 @@ export default function DashboardPage() {
               : null}
             {!error && !loading && !upcomingEvents.length ? (
               <EmptyState
-                title="Todavia no hay eventos cargados"
-                description="Crea tu primera fecha importante para ver alertas y resumen semanal."
+                title="Todavía no hay eventos cargados"
+                description="Creá tu primera fecha importante para ver alertas y un resumen semanal."
               />
             ) : null}
           </div>
@@ -125,7 +125,7 @@ export default function DashboardPage() {
           </CardSection>
 
           <CardSection>
-            <h2 className="text-lg font-semibold text-slate-950">Accesos rapidos</h2>
+            <h2 className="text-lg font-semibold text-slate-950">Accesos rápidos</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <Link href="/subjects" className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">
                 Nueva materia

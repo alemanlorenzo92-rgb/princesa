@@ -164,10 +164,10 @@ function EventForm({
           ))}
         </select>
       </Field>
-      <Field label="Titulo">
+      <Field label="Título">
         <input name="title" required defaultValue={editing?.title || ""} className={inputClassName()} />
       </Field>
-      <Field label="Descripcion">
+      <Field label="Descripción">
         <textarea
           name="description"
           defaultValue={editing?.description || ""}
@@ -229,7 +229,7 @@ function EventForm({
               >
                 <option value="minutes">Minutos</option>
                 <option value="hours">Horas</option>
-                <option value="days">Dias</option>
+                <option value="days">Días</option>
               </select>
             </Field>
           </>

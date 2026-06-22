@@ -27,7 +27,7 @@ export default function ProfilePage() {
       <PageHeader
         eyebrow="Perfil"
         title="Tu cuenta"
-        description="Resumen de tu actividad academica, estado actual del plan y uso de IA."
+        description="Resumen de tu actividad académica, estado actual del plan y uso de IA."
       />
       <div className="grid gap-4 lg:grid-cols-3">
         <CardSection>
