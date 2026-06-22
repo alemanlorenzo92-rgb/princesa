@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { BillingPlanCards } from "@/components/billing-plan-cards";
 import { CardSection } from "@/components/card-section";
 import { PrimaryButton, SecondaryButton } from "@/components/forms";
 import { getPlanConfig } from "@/lib/plans";
@@ -54,11 +54,9 @@ export default function WelcomePage() {
             <PrimaryButton type="button" onClick={continueWithFreePlan} className="sm:min-w-56">
               Continuar con plan gratis
             </PrimaryButton>
-            <Link href="/settings" className="inline-flex">
-              <SecondaryButton type="button" className="sm:min-w-56">
-                Ver planes pagos
-              </SecondaryButton>
-            </Link>
+            <SecondaryButton type="button" onClick={() => document.getElementById("paid-plans")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="sm:min-w-56">
+              Ver planes pagos
+            </SecondaryButton>
           </div>
         </CardSection>
 
@@ -81,6 +79,17 @@ export default function WelcomePage() {
           </CardSection>
         </div>
       </div>
+
+      <section id="paid-plans" className="mt-6 space-y-4">
+        <div className="rounded-[28px] border border-white/60 bg-white/85 p-5 shadow-soft backdrop-blur">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-coral-600">Elegí cómo seguir</p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Comprar un plan o seguir gratis</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Acá podés comparar rápido y decidir sin salir de la bienvenida. Si no querés pagar ahora, seguí con el plan gratis.
+          </p>
+        </div>
+        <BillingPlanCards />
+      </section>
     </main>
   );
 }
