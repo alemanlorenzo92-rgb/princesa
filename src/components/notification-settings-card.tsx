@@ -362,7 +362,7 @@ export function NotificationSettingsCard() {
       {error ? <p className="mt-4 text-sm text-rose-600">{error}</p> : null}
 
       <div className="mt-5 flex flex-wrap gap-3">
-        {isMobile && !isInstalled ? (
+        {!isInstalled ? (
           <PrimaryButton
             type="button"
             onClick={installApp}
