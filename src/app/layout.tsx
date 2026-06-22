@@ -18,8 +18,15 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "EstudioAI",
+  title: {
+    default: "EstudioAI",
+    template: "%s · EstudioAI",
+  },
+  applicationName: "EstudioAI",
   description: "App mobile-first para organizar materias, fechas y estudio con IA.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default async function RootLayout({

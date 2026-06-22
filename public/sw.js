@@ -1,4 +1,4 @@
-const CACHE_NAME = "estudioai-cache-v1";
+const CACHE_NAME = "estudioai-cache-v2";
 const OFFLINE_URLS = ["/", "/dashboard"];
 
 self.addEventListener("install", (event) => {
@@ -62,7 +62,7 @@ self.addEventListener("push", (event) => {
     data: {
       url: payload.url || "/dashboard",
     },
-    tag: payload.tag || "princesa-notification",
+    tag: payload.tag || "estudioai-notification",
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
   };
