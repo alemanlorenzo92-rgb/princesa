@@ -148,19 +148,19 @@ export default function SubjectsPage() {
                         return (
                           <button
                             key={option.value}
-                            type="button"
-                            onClick={() => {
-                              setSelectedColor(option.value);
-                              setColorMenuOpen(false);
-                            }}
-                            className={`flex w-full items-center gap-4 rounded-2xl border px-3 py-2 text-xs font-medium transition ${
+                          type="button"
+                          onClick={() => {
+                            setSelectedColor(option.value);
+                            setColorMenuOpen(false);
+                          }}
+                            className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-1.5 text-[11px] font-medium transition ${
                               selected
                                 ? "border-slate-950 bg-slate-950 text-white"
                                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                             }`}
                           >
                             <span
-                              className="h-7 w-7 shrink-0 rounded-full ring-2 ring-white/70"
+                              className="h-6 w-6 shrink-0 rounded-full ring-2 ring-white/70"
                               style={{ backgroundColor: option.value }}
                             />
                             <span>{option.label}</span>
