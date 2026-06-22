@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { DM_Sans, Sora } from "next/font/google";
 
 import { PwaRegister } from "@/components/pwa-register";
@@ -21,14 +22,29 @@ export const metadata: Metadata = {
   description: "App mobile-first para organizar materias, fechas y estudio con IA.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await headers();
+
+  const publicRuntimeConfig = {
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    supabaseAnonKey:
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      "",
+  };
+
   return (
     <html lang="es">
       <body className={`${dmSans.variable} ${sora.variable}`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__PUBLIC_RUNTIME_CONFIG__ = ${JSON.stringify(publicRuntimeConfig).replace(/</g, "\\u003c")};`,
+          }}
+        />
         <AppProviders>
           <PwaRegister />
           {children}

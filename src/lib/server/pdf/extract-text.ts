@@ -6,6 +6,8 @@ import { MAX_EXTRACTED_PDF_TEXT_CHARACTERS } from "@/lib/pdf-config";
 
 function normalizeExtractedText(value: string) {
   return value
+    .replace(/\u0000/g, "")
+    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")

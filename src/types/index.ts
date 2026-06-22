@@ -28,6 +28,7 @@ export type DetailLevel = "low" | "medium" | "high";
 export type MaterialStyle = "simple" | "academic" | "easy";
 export type PlanId = "trial" | "student" | "pro" | "expired_trial";
 export type TrialStatus = "active" | "used" | "expired";
+export type UserRole = "student" | "admin";
 export type FeatureKey =
   | StudyMaterialType
   | "ai_chat"
@@ -73,6 +74,8 @@ export interface UserAccount {
   name: string;
   email: string;
   createdAt: string;
+  role: UserRole;
+  isAdmin: boolean;
   aiState: AiAccountState;
 }
 
@@ -80,6 +83,7 @@ export interface ProfileRecord {
   id: string;
   email: string;
   full_name: string | null;
+  role?: UserRole | null;
   created_at: string;
   updated_at: string;
 }

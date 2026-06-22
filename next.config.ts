@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  outputFileTracingIncludes: {
+    "/api/files/extract-pdf-text": [
+      "./node_modules/unpdf/**/*",
+      "./node_modules/pdfjs-dist/**/*",
+    ],
+  },
   async headers() {
     return [
       {

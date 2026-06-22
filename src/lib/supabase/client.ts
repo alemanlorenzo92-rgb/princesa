@@ -3,6 +3,8 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { SupabaseClient } from "@supabase/supabase-js";
 
+import { getPublicRuntimeConfig } from "@/lib/public-runtime";
+
 let browserClient: SupabaseClient | null = null;
 
 export function createClient() {
@@ -10,10 +12,7 @@ export function createClient() {
     return browserClient;
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const { supabaseUrl: url, supabaseAnonKey: anonKey } = getPublicRuntimeConfig();
 
   if (!url || !anonKey) {
     throw new Error(

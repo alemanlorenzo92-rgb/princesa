@@ -14,9 +14,19 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   full_name text,
+  role text not null default 'student',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+add column if not exists role text not null default 'student';
+
+alter table public.profiles
+drop constraint if exists profiles_role_check;
+
+alter table public.profiles
+add constraint profiles_role_check check (role in ('student', 'admin'));
 
 create table if not exists public.subscriptions (
   id uuid primary key default gen_random_uuid(),
@@ -277,6 +287,10 @@ alter table public.ai_conversations enable row level security;
 alter table public.ai_messages enable row level security;
 alter table public.billing_events enable row level security;
 
+drop policy if exists "profiles_select_own" on public.profiles;
+drop policy if exists "profiles_insert_own" on public.profiles;
+drop policy if exists "profiles_update_own" on public.profiles;
+drop policy if exists "profiles_delete_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
 for select using (auth.uid() = id);
 create policy "profiles_insert_own" on public.profiles
@@ -286,6 +300,10 @@ for update using (auth.uid() = id) with check (auth.uid() = id);
 create policy "profiles_delete_own" on public.profiles
 for delete using (auth.uid() = id);
 
+drop policy if exists "subscriptions_select_own" on public.subscriptions;
+drop policy if exists "subscriptions_insert_own" on public.subscriptions;
+drop policy if exists "subscriptions_update_own" on public.subscriptions;
+drop policy if exists "subscriptions_delete_own" on public.subscriptions;
 create policy "subscriptions_select_own" on public.subscriptions
 for select using (auth.uid() = user_id);
 create policy "subscriptions_insert_own" on public.subscriptions
@@ -295,6 +313,10 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "subscriptions_delete_own" on public.subscriptions
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "ai_trials_select_own" on public.ai_trials;
+drop policy if exists "ai_trials_insert_own" on public.ai_trials;
+drop policy if exists "ai_trials_update_own" on public.ai_trials;
+drop policy if exists "ai_trials_delete_own" on public.ai_trials;
 create policy "ai_trials_select_own" on public.ai_trials
 for select using (auth.uid() = user_id);
 create policy "ai_trials_insert_own" on public.ai_trials
@@ -304,6 +326,10 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "ai_trials_delete_own" on public.ai_trials
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "ai_monthly_usage_select_own" on public.ai_monthly_usage;
+drop policy if exists "ai_monthly_usage_insert_own" on public.ai_monthly_usage;
+drop policy if exists "ai_monthly_usage_update_own" on public.ai_monthly_usage;
+drop policy if exists "ai_monthly_usage_delete_own" on public.ai_monthly_usage;
 create policy "ai_monthly_usage_select_own" on public.ai_monthly_usage
 for select using (auth.uid() = user_id);
 create policy "ai_monthly_usage_insert_own" on public.ai_monthly_usage
@@ -313,6 +339,10 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "ai_monthly_usage_delete_own" on public.ai_monthly_usage
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "ai_usage_logs_select_own" on public.ai_usage_logs;
+drop policy if exists "ai_usage_logs_insert_own" on public.ai_usage_logs;
+drop policy if exists "ai_usage_logs_update_own" on public.ai_usage_logs;
+drop policy if exists "ai_usage_logs_delete_own" on public.ai_usage_logs;
 create policy "ai_usage_logs_select_own" on public.ai_usage_logs
 for select using (auth.uid() = user_id);
 create policy "ai_usage_logs_insert_own" on public.ai_usage_logs
@@ -322,6 +352,10 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "ai_usage_logs_delete_own" on public.ai_usage_logs
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "subjects_select_own" on public.subjects;
+drop policy if exists "subjects_insert_own" on public.subjects;
+drop policy if exists "subjects_update_own" on public.subjects;
+drop policy if exists "subjects_delete_own" on public.subjects;
 create policy "subjects_select_own" on public.subjects
 for select using (auth.uid() = user_id);
 create policy "subjects_insert_own" on public.subjects
@@ -331,6 +365,10 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "subjects_delete_own" on public.subjects
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "academic_events_select_own" on public.academic_events;
+drop policy if exists "academic_events_insert_own" on public.academic_events;
+drop policy if exists "academic_events_update_own" on public.academic_events;
+drop policy if exists "academic_events_delete_own" on public.academic_events;
 create policy "academic_events_select_own" on public.academic_events
 for select using (auth.uid() = user_id);
 create policy "academic_events_insert_own" on public.academic_events
@@ -340,6 +378,10 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "academic_events_delete_own" on public.academic_events
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "study_files_select_own" on public.study_files;
+drop policy if exists "study_files_insert_own" on public.study_files;
+drop policy if exists "study_files_update_own" on public.study_files;
+drop policy if exists "study_files_delete_own" on public.study_files;
 create policy "study_files_select_own" on public.study_files
 for select using (auth.uid() = user_id);
 create policy "study_files_insert_own" on public.study_files
@@ -349,6 +391,10 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "study_files_delete_own" on public.study_files
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "generated_materials_select_own" on public.generated_materials;
+drop policy if exists "generated_materials_insert_own" on public.generated_materials;
+drop policy if exists "generated_materials_update_own" on public.generated_materials;
+drop policy if exists "generated_materials_delete_own" on public.generated_materials;
 create policy "generated_materials_select_own" on public.generated_materials
 for select using (auth.uid() = user_id);
 create policy "generated_materials_insert_own" on public.generated_materials
@@ -358,6 +404,10 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "generated_materials_delete_own" on public.generated_materials
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "ai_conversations_select_own" on public.ai_conversations;
+drop policy if exists "ai_conversations_insert_own" on public.ai_conversations;
+drop policy if exists "ai_conversations_update_own" on public.ai_conversations;
+drop policy if exists "ai_conversations_delete_own" on public.ai_conversations;
 create policy "ai_conversations_select_own" on public.ai_conversations
 for select using (auth.uid() = user_id);
 create policy "ai_conversations_insert_own" on public.ai_conversations
@@ -367,6 +417,10 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "ai_conversations_delete_own" on public.ai_conversations
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "ai_messages_select_own" on public.ai_messages;
+drop policy if exists "ai_messages_insert_own" on public.ai_messages;
+drop policy if exists "ai_messages_update_own" on public.ai_messages;
+drop policy if exists "ai_messages_delete_own" on public.ai_messages;
 create policy "ai_messages_select_own" on public.ai_messages
 for select using (auth.uid() = user_id);
 create policy "ai_messages_insert_own" on public.ai_messages
@@ -376,6 +430,7 @@ for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "ai_messages_delete_own" on public.ai_messages
 for delete using (auth.uid() = user_id);
 
+drop policy if exists "billing_events_select_own" on public.billing_events;
 create policy "billing_events_select_own" on public.billing_events
 for select using (auth.uid() = user_id);
 

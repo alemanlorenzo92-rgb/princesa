@@ -9,23 +9,28 @@ import {
   Home,
   MessageSquare,
   Settings,
+  Shield,
   Sparkles,
 } from "lucide-react";
 
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-
-const items = [
-  { href: "/dashboard", label: "Inicio", icon: Home },
-  { href: "/subjects", label: "Materias", icon: BookOpen },
-  { href: "/calendar", label: "Fechas", icon: CalendarDays },
-  { href: "/files", label: "Archivos", icon: FolderClosed },
-  { href: "/ai", label: "IA", icon: Sparkles },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "/settings", label: "Mas", icon: Settings },
-];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const items = [
+    { href: "/dashboard", label: "Inicio", icon: Home },
+    { href: "/subjects", label: "Materias", icon: BookOpen },
+    { href: "/calendar", label: "Fechas", icon: CalendarDays },
+    { href: "/files", label: "Archivos", icon: FolderClosed },
+    { href: "/ai", label: "IA", icon: Sparkles },
+    { href: "/chat", label: "Chat", icon: MessageSquare },
+    ...(user?.isAdmin
+      ? [{ href: "/admin", label: "Admin", icon: Shield }]
+      : []),
+    { href: "/settings", label: "Mas", icon: Settings },
+  ];
 
   return (
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col lg:flex-row">

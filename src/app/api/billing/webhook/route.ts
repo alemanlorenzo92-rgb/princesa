@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { createBillingEvent } from "@/lib/services/billing-events";
-import { activateSubscriptionPlan } from "@/lib/services/subscription";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  getPaymentById,
   validateMercadoPagoWebhookSignature,
 } from "@/lib/server/mercadopago";
-import { PlanId } from "@/types";
-
-function normalizePlanId(planId: unknown) {
-  return planId === "student" || planId === "pro" ? (planId as Extract<PlanId, "student" | "pro">) : null;
-}
+import { processMercadoPagoPayment } from "@/lib/server/mercadopago-payment";
 
 export async function POST(request: NextRequest) {
   const url = new URL(request.url);
@@ -59,31 +52,18 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
 
   try {
-    const payment = await getPaymentById(dataId);
-    const metadata = (payment.metadata || {}) as Record<string, unknown>;
-    const userId = typeof metadata.user_id === "string" ? metadata.user_id : null;
-    const planId = normalizePlanId(metadata.plan_id);
-
-    await createBillingEvent(admin, {
-      userId,
-      planId,
-      providerEventId: dataId,
-      providerPaymentId: payment.id ? String(payment.id) : dataId,
-      status: payment.status || "unknown",
-      rawEvent: {
-        query: Object.fromEntries(url.searchParams.entries()),
-        body: payload,
-        payment,
-      },
+    const result = await processMercadoPagoPayment({
+      admin,
+      paymentId: dataId,
+      payload,
+      query: Object.fromEntries(url.searchParams.entries()),
     });
 
-    if (payment.status !== "approved" || !userId || !planId) {
-      return NextResponse.json({ received: true });
-    }
-
-    await activateSubscriptionPlan(admin, userId, planId);
-
-    return NextResponse.json({ received: true, activated: true });
+    return NextResponse.json({
+      received: true,
+      activated: result.activated,
+      status: result.status,
+    });
   } catch (error) {
     console.error("Mercado Pago webhook failed", error);
     return NextResponse.json(

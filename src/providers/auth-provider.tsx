@@ -4,6 +4,7 @@ import { createContext, useEffect, useState } from "react";
 import { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { getCurrentMonthlyUsage, getUsageMonth } from "@/lib/ai-usage";
+import { getPublicRuntimeConfig } from "@/lib/public-runtime";
 import { createClient } from "@/lib/supabase/client";
 import { getMonthlyUsage, mapSupabaseAiState } from "@/lib/services/ai-usage";
 import { getAiTrial } from "@/lib/services/ai-trial";
@@ -12,7 +13,7 @@ import {
   getCurrentSubscription,
   updateSubscriptionPlan,
 } from "@/lib/services/subscription";
-import { AiAccountState, PlanId, UserAccount } from "@/types";
+import { AiAccountState, PlanId, UserAccount, UserRole } from "@/types";
 
 interface RegisterResult {
   needsEmailConfirmation: boolean;
@@ -36,21 +37,35 @@ interface AuthContextValue {
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
-const hasSupabaseEnv = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY),
-);
+function hasSupabaseEnv() {
+  const { supabaseUrl, supabaseAnonKey } = getPublicRuntimeConfig();
+  return Boolean(supabaseUrl && supabaseAnonKey);
+}
 
 async function buildAppUser(
   supabase: SupabaseClient,
   authUser: User,
 ): Promise<UserAccount> {
-  const [profile, subscription, trial, monthlyUsage] = await Promise.all([
+  const [profile, subscription, trial, monthlyUsage, adminState] = await Promise.all([
     getProfile(supabase, authUser.id),
     getCurrentSubscription(supabase, authUser.id),
     getAiTrial(supabase, authUser.id),
     getMonthlyUsage(supabase, authUser.id),
+    fetch("/api/auth/me", {
+      method: "GET",
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        return (await response.json()) as {
+          role?: UserRole;
+          isAdmin?: boolean;
+        };
+      })
+      .catch(() => null),
   ]);
 
   const currentMonthlyUsage = getCurrentMonthlyUsage(
@@ -75,13 +90,15 @@ async function buildAppUser(
     name: profile?.full_name || authUser.user_metadata.full_name || "Estudiante",
     email: profile?.email || authUser.email || "",
     createdAt: profile?.created_at || authUser.created_at,
+    role: adminState?.role || profile?.role || "student",
+    isAdmin: Boolean(adminState?.isAdmin || profile?.role === "admin"),
     aiState,
   };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserAccount | null>(null);
-  const [loading, setLoading] = useState(hasSupabaseEnv);
+  const [loading, setLoading] = useState(hasSupabaseEnv());
 
   function requireSupabaseClient() {
     return createClient();
@@ -109,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv()) {
       return () => {
         active = false;
       };
@@ -162,27 +179,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function register(name: string, email: string, password: string) {
     const client = requireSupabaseClient();
-    const { data, error } = await client.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password,
-      options: {
-        data: {
-          full_name: name.trim(),
-        },
+    const normalizedEmail = email.trim().toLowerCase();
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        name,
+        email: normalizedEmail,
+        password,
+      }),
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: string; needsEmailConfirmation?: boolean }
+      | null;
+
+    if (!response.ok) {
+      throw new Error(payload?.error || "No se pudo crear la cuenta.");
+    }
+
+    const { data, error } = await client.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
     });
 
     if (error) {
       throw error;
     }
 
-    if (data.session?.user) {
-      const nextUser = await buildAppUser(client, data.session.user);
+    if (data.user) {
+      const nextUser = await buildAppUser(client, data.user);
       setUser(nextUser);
     }
 
     return {
-      needsEmailConfirmation: !data.session,
+      needsEmailConfirmation: Boolean(payload?.needsEmailConfirmation),
     };
   }
 
