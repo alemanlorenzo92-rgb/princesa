@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BillingPlanCards } from "@/components/billing-plan-cards";
 import { CardSection } from "@/components/card-section";
 import { ConfigStatusCard } from "@/components/config-status-card";
+import { NotificationSettingsCard } from "@/components/notification-settings-card";
 import { PageHeader } from "@/components/page-header";
 import { PrimaryButton, SecondaryButton } from "@/components/forms";
 import { useAuth } from "@/hooks/use-auth";
@@ -87,6 +88,10 @@ export default function SettingsPage() {
 
       <div className="mt-4">
         <ConfigStatusCard />
+      </div>
+
+      <div className="mt-4">
+        <NotificationSettingsCard />
       </div>
 
       <div className="mt-6">

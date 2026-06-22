@@ -10,7 +10,12 @@ interface ConfigStatusResponse {
   details: Array<{
     key: string;
     visibility: "public" | "private";
-    category: "supabase" | "openai" | "mercadopago" | "storage";
+    category:
+      | "supabase"
+      | "openai"
+      | "mercadopago"
+      | "storage"
+      | "notifications";
     configured: boolean;
   }>;
 }

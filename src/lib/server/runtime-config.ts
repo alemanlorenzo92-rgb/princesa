@@ -4,7 +4,12 @@ import { STUDY_FILES_BUCKET } from "@/lib/services/storage-files";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type ConfigVisibility = "public" | "private";
-type ConfigCategory = "supabase" | "openai" | "mercadopago" | "storage";
+type ConfigCategory =
+  | "supabase"
+  | "openai"
+  | "mercadopago"
+  | "storage"
+  | "notifications";
 
 export interface RuntimeConfigStatusItem {
   key: string;
@@ -60,6 +65,24 @@ const BASE_RUNTIME_CONFIG: RuntimeConfigStatusItem[] = [
     key: "MERCADOPAGO_PRO_PRICE",
     visibility: "private",
     category: "mercadopago",
+    configured: false,
+  },
+  {
+    key: "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+    visibility: "public",
+    category: "notifications",
+    configured: false,
+  },
+  {
+    key: "VAPID_PRIVATE_KEY",
+    visibility: "private",
+    category: "notifications",
+    configured: false,
+  },
+  {
+    key: "VAPID_SUBJECT",
+    visibility: "private",
+    category: "notifications",
     configured: false,
   },
 ];

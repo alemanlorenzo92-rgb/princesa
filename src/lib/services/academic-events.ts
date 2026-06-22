@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
-import { CalendarEvent, AcademicEventRecord } from "@/types";
+import { AcademicEventRecord, CalendarEvent } from "@/types";
 
 function mapAcademicEvent(record: AcademicEventRecord): CalendarEvent {
   return {
@@ -12,10 +12,29 @@ function mapAcademicEvent(record: AcademicEventRecord): CalendarEvent {
     type: record.type || "custom",
     date: record.event_date,
     time: record.event_time || undefined,
+    reminderOffsetMinutes:
+      record.reminder_offset_minutes === null
+        ? undefined
+        : record.reminder_offset_minutes,
     priority: record.priority || "medium",
     status: record.status || "pending",
     createdAt: record.created_at,
   };
+}
+
+function normalizeReminderOffsetMinutes(
+  reminderOffsetMinutes: CalendarEvent["reminderOffsetMinutes"],
+) {
+  if (
+    typeof reminderOffsetMinutes === "number" &&
+    Number.isInteger(reminderOffsetMinutes) &&
+    reminderOffsetMinutes >= 0 &&
+    reminderOffsetMinutes <= 525600
+  ) {
+    return reminderOffsetMinutes;
+  }
+
+  return null;
 }
 
 export async function getAllAcademicEvents(supabase: SupabaseClient) {
@@ -78,6 +97,10 @@ export async function createAcademicEvent(
       type: input.type,
       event_date: input.date,
       event_time: input.time || null,
+      reminder_offset_minutes: normalizeReminderOffsetMinutes(
+        input.reminderOffsetMinutes,
+      ),
+      reminder_sent_at: null,
       priority: input.priority,
       status: input.status,
     })
@@ -102,6 +125,10 @@ export async function updateAcademicEvent(
       type: input.type,
       event_date: input.date,
       event_time: input.time || null,
+      reminder_offset_minutes: normalizeReminderOffsetMinutes(
+        input.reminderOffsetMinutes,
+      ),
+      reminder_sent_at: null,
       priority: input.priority,
       status: input.status,
       updated_at: new Date().toISOString(),

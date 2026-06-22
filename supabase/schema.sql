@@ -106,10 +106,31 @@ create table if not exists public.academic_events (
   type text,
   event_date date not null,
   event_time time,
+  reminder_offset_minutes integer,
+  reminder_sent_at timestamptz,
   priority text,
   status text not null default 'pending',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+alter table public.academic_events
+add column if not exists reminder_offset_minutes integer;
+
+alter table public.academic_events
+add column if not exists reminder_sent_at timestamptz;
+
+alter table public.academic_events
+drop constraint if exists academic_events_reminder_offset_minutes_check;
+
+alter table public.academic_events
+add constraint academic_events_reminder_offset_minutes_check
+check (
+  reminder_offset_minutes is null
+  or (
+    reminder_offset_minutes >= 0
+    and reminder_offset_minutes <= 525600
+  )
 );
 
 create table if not exists public.study_files (
@@ -181,6 +202,19 @@ create table if not exists public.billing_events (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  is_active boolean not null default true,
+  last_seen_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'study-files',
@@ -229,6 +263,10 @@ for each row execute function public.set_updated_at();
 
 drop trigger if exists ai_conversations_set_updated_at on public.ai_conversations;
 create trigger ai_conversations_set_updated_at before update on public.ai_conversations
+for each row execute function public.set_updated_at();
+
+drop trigger if exists push_subscriptions_set_updated_at on public.push_subscriptions;
+create trigger push_subscriptions_set_updated_at before update on public.push_subscriptions
 for each row execute function public.set_updated_at();
 
 create or replace function public.handle_new_user()
@@ -286,6 +324,7 @@ alter table public.generated_materials enable row level security;
 alter table public.ai_conversations enable row level security;
 alter table public.ai_messages enable row level security;
 alter table public.billing_events enable row level security;
+alter table public.push_subscriptions enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 drop policy if exists "profiles_insert_own" on public.profiles;
@@ -433,6 +472,19 @@ for delete using (auth.uid() = user_id);
 drop policy if exists "billing_events_select_own" on public.billing_events;
 create policy "billing_events_select_own" on public.billing_events
 for select using (auth.uid() = user_id);
+
+drop policy if exists "push_subscriptions_select_own" on public.push_subscriptions;
+drop policy if exists "push_subscriptions_insert_own" on public.push_subscriptions;
+drop policy if exists "push_subscriptions_update_own" on public.push_subscriptions;
+drop policy if exists "push_subscriptions_delete_own" on public.push_subscriptions;
+create policy "push_subscriptions_select_own" on public.push_subscriptions
+for select using (auth.uid() = user_id);
+create policy "push_subscriptions_insert_own" on public.push_subscriptions
+for insert with check (auth.uid() = user_id);
+create policy "push_subscriptions_update_own" on public.push_subscriptions
+for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "push_subscriptions_delete_own" on public.push_subscriptions
+for delete using (auth.uid() = user_id);
 
 drop policy if exists "study_files_storage_select_own" on storage.objects;
 drop policy if exists "study_files_storage_insert_own" on storage.objects;

@@ -1,5 +1,6 @@
 export type Priority = "low" | "medium" | "high";
 export type EventStatus = "pending" | "completed" | "overdue";
+export type ReminderUnit = "minutes" | "hours" | "days";
 export type EventType =
   | "exam"
   | "assignment"
@@ -163,8 +164,23 @@ export interface AcademicEventRecord {
   type: EventType | null;
   event_date: string;
   event_time: string | null;
+  reminder_offset_minutes: number | null;
+  reminder_sent_at: string | null;
   priority: Priority | null;
   status: EventStatus | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PushSubscriptionRecord {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string | null;
+  is_active: boolean;
+  last_seen_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -250,6 +266,7 @@ export interface CalendarEvent {
   type: EventType;
   date: string;
   time?: string;
+  reminderOffsetMinutes?: number;
   priority: Priority;
   status: EventStatus;
   createdAt: string;

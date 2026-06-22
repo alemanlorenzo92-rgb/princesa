@@ -1,4 +1,9 @@
-import { DetailLevel, MaterialStyle, StudyMaterialType } from "@/types";
+import {
+  DetailLevel,
+  MaterialStyle,
+  ReminderUnit,
+  StudyMaterialType,
+} from "@/types";
 
 export const STORAGE_KEYS = {
   users: "princesa-users",
@@ -70,3 +75,43 @@ export const STATUS_LABELS = {
   completed: "Completado",
   overdue: "Vencido",
 } as const;
+
+export const REMINDER_OPTIONS: Array<{
+  value: number;
+  label: string;
+}> = [
+  { value: 0, label: "En el momento" },
+  { value: 10, label: "10 minutos antes" },
+  { value: 30, label: "30 minutos antes" },
+  { value: 60, label: "1 hora antes" },
+  { value: 1440, label: "1 dia antes" },
+  { value: 2880, label: "2 dias antes" },
+  { value: 4320, label: "3 dias antes" },
+  { value: 10080, label: "7 dias antes" },
+];
+
+export const REMINDER_UNIT_LABELS: Record<ReminderUnit, string> = {
+  minutes: "minutos",
+  hours: "horas",
+  days: "dias",
+};
+
+export function formatReminderOffsetMinutes(value: number) {
+  const directOption = REMINDER_OPTIONS.find((option) => option.value === value);
+
+  if (directOption) {
+    return directOption.label;
+  }
+
+  if (value % 1440 === 0) {
+    const days = value / 1440;
+    return `${days} ${days === 1 ? "dia" : "dias"} antes`;
+  }
+
+  if (value % 60 === 0) {
+    const hours = value / 60;
+    return `${hours} ${hours === 1 ? "hora" : "horas"} antes`;
+  }
+
+  return `${value} ${value === 1 ? "minuto" : "minutos"} antes`;
+}
