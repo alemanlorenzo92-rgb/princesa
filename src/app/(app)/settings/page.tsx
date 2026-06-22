@@ -19,33 +19,44 @@ export default function SettingsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Configuracion"
-        title="Perfil y ajustes"
-        description="Revisá tu cuenta, tu plan y la experiencia en la app desde un solo lugar."
+        eyebrow="EstudioAI"
+        title="Perfil, planes y accesos"
+        description="Centralizá tu cuenta, activá mejoras y descubrí qué desbloquea cada plan desde un solo lugar."
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <CardSection>
-          <h2 className="text-lg font-semibold text-slate-950">Cuenta</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Tu cuenta</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             Tu sesión se mantiene sincronizada entre web, app y accesos seguros.
           </p>
         </CardSection>
         <CardSection>
-          <h2 className="text-lg font-semibold text-slate-950">IA</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Desbloqueos</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Cada cuenta tiene una prueba gratuita única y después necesita un plan activo para seguir usando IA.
+            La prueba gratuita es limitada y después necesitás un plan activo para seguir usando IA y chat.
           </p>
         </CardSection>
         <CardSection>
-          <h2 className="text-lg font-semibold text-slate-950">PWA</h2>
+          <h2 className="text-lg font-semibold text-slate-950">App instalada</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Incluye `manifest`, iconos y `service worker` ajustados para una experiencia móvil más limpia.
+            Incluye `manifest`, iconos y `service worker` para una experiencia móvil más limpia y estable.
           </p>
         </CardSection>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <CardSection className="border-emerald-200 bg-emerald-50/70">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
+            Mejor plan recomendado
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Más IA, más contexto, menos límites</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-700">
+            Si querés usar chat, PDFs y materiales sin fricción, los planes pagos están pensados para eso.
+            Ahora mostramos el descuento de lanzamiento para que sea más fácil decidir.
+          </p>
+        </CardSection>
+
         <CardSection>
           <h2 className="text-lg font-semibold text-slate-950">Estado actual</h2>
           <p className="mt-3 text-sm text-slate-600">
@@ -59,7 +70,7 @@ export default function SettingsPage() {
         {isDevelopment ? (
           <CardSection>
             <h2 className="text-lg font-semibold text-slate-950">Modo desarrollo</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">Modo desarrollo: esto no aparece en producción.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Esto no aparece en producción.</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {PLAN_ORDER.map((planId) => (
                 <SecondaryButton key={planId} type="button" onClick={() => setPlanForDevelopment(planId)}>

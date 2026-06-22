@@ -104,7 +104,7 @@ export function BillingPlanCards() {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <CardSection>
-        <p className="text-sm text-slate-500">Prueba gratuita</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Prueba gratuita</p>
         <p className="mt-2 text-2xl font-semibold text-slate-950">
           {getPlanConfig("trial").label}
         </p>
@@ -121,7 +121,7 @@ export function BillingPlanCards() {
 
         return (
           <CardSection key={planId}>
-            <p className="text-sm text-slate-500">{planConfig.label}</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{planConfig.label}</p>
             <div className="mt-2 flex items-end gap-3">
               <p className="text-2xl font-semibold text-slate-950">
                 {price ? `${formatCurrency(price)} / mes` : "Precio configurable"}
@@ -151,8 +151,8 @@ export function BillingPlanCards() {
                 : loadingPlanId === planId
                   ? "Redirigiendo..."
                   : planId === "student"
-                    ? "Subir a Estudiante"
-                    : "Subir a Pro"}
+                    ? "Activar Estudiante"
+                    : "Activar Pro"}
             </PrimaryButton>
           </CardSection>
         );
