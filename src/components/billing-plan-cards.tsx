@@ -30,6 +30,10 @@ const BILLING_FEATURES: Record<Extract<PlanId, "student" | "pro">, string[]> = {
   ],
 };
 
+function formatCurrency(value: number) {
+  return `$${value.toLocaleString("es-AR")}`;
+}
+
 export function BillingPlanCards() {
   const { user } = useAuth();
   const [prices, setPrices] = useState<BillingPlanPrice[]>([]);
@@ -112,14 +116,25 @@ export function BillingPlanCards() {
       {(["student", "pro"] as const).map((planId) => {
         const planConfig = getPlanConfig(planId);
         const price = prices.find((entry) => entry.planId === planId)?.amount;
+        const previousPrice = price ? price + 3000 : null;
         const isCurrent = user?.aiState.planId === planId;
 
         return (
           <CardSection key={planId}>
             <p className="text-sm text-slate-500">{planConfig.label}</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950">
-              {price ? `$${price.toLocaleString("es-AR")} / mes` : "Precio configurable"}
-            </p>
+            <div className="mt-2 flex items-end gap-3">
+              <p className="text-2xl font-semibold text-slate-950">
+                {price ? `${formatCurrency(price)} / mes` : "Precio configurable"}
+              </p>
+              {previousPrice ? (
+                <p className="text-sm text-slate-400 line-through">
+                  {formatCurrency(previousPrice)}
+                </p>
+              ) : null}
+            </div>
+            {price ? (
+              <p className="mt-2 text-sm font-medium text-emerald-700">Descuento aplicado por lanzamiento</p>
+            ) : null}
             <div className="mt-4 space-y-2 text-sm text-slate-600">
               {BILLING_FEATURES[planId].map((feature) => (
                 <p key={feature}>{feature}</p>
@@ -136,8 +151,8 @@ export function BillingPlanCards() {
                 : loadingPlanId === planId
                   ? "Redirigiendo..."
                   : planId === "student"
-                    ? "Elegir Plan Estudiante"
-                    : "Elegir Plan Pro"}
+                    ? "Subir a Estudiante"
+                    : "Subir a Pro"}
             </PrimaryButton>
           </CardSection>
         );

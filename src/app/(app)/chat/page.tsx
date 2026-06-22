@@ -211,7 +211,7 @@ export default function ChatPage() {
         <CardSection>
           <p className="text-lg font-semibold text-slate-950">Tu prueba gratuita de IA ya terminó</p>
           <p className="mt-2 text-sm text-slate-600">
-            Mejora tu plan para seguir usando el chat de estudio.
+            Mejorá tu plan para seguir usando el chat de estudio.
           </p>
           <Link
             href="/settings"
@@ -280,7 +280,7 @@ export default function ChatPage() {
 
             {selectedFile && !canUsePdfChat ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                El chat con PDF esta disponible en planes pagos.
+                El chat con PDF requiere el plan Pro.
               </div>
             ) : null}
 
@@ -366,7 +366,7 @@ export default function ChatPage() {
           ) : null}
           {!canUseChat && planId !== "expired_trial" ? (
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Tu plan actual no incluye chat de estudio.
+              Para usar el chat de estudio necesitás el plan Pro.
             </div>
           ) : null}
 

@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!canUseFeature(aiState.planId, "ai_chat")) {
-    return buildUpgradeResponse("Tu plan actual no incluye el chat de estudio.");
+    return buildUpgradeResponse("Para usar el chat de estudio necesitás el plan Pro.");
   }
 
   const [subject, file] = await Promise.all([

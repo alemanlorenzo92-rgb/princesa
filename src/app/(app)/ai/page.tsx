@@ -105,7 +105,7 @@ export default function AiPage() {
     if (!sourceText.trim()) {
       setError(
         linkedDocument?.filePath
-          ? "Ese PDF todavia no tiene texto extraido. Extraelo primero o usa texto manual."
+          ? "Ese PDF todavia no tiene texto extraido. Para seguir con IA, sube al plan Pro o extraelo primero y volve a intentar."
           : "No hay texto suficiente. Pega contenido o elige un archivo con texto asociado.",
       );
       setResult("");
@@ -124,8 +124,8 @@ export default function AiPage() {
     if (estimatedInputTokens > planConfig.requestInputTokensLimit) {
       setError(
         planId === "trial"
-          ? "El texto es demasiado largo para tu prueba gratuita."
-          : "El texto es demasiado largo para tu plan actual.",
+          ? "El texto es demasiado largo para tu prueba gratuita. Para trabajar con textos mas largos, sube al plan Pro."
+          : "El texto es demasiado largo para tu plan actual. Para textos mas extensos, sube al plan Pro.",
       );
       setResult("");
       return;
@@ -134,8 +134,8 @@ export default function AiPage() {
     if (!canUseFeature(planId, type)) {
       setError(
         planId === "trial"
-          ? "Esta funcion no esta disponible durante la prueba gratuita."
-          : "Tu plan actual no incluye esta funcion.",
+          ? "Para usar esta funcion necesitas el plan Pro."
+          : "Para usar esta funcion necesitas el plan Pro.",
       );
       setResult("");
       return;
@@ -410,13 +410,13 @@ export default function AiPage() {
             <Field label="Tipo de material">
               <select name="type" defaultValue="short_summary" className={inputClassName()}>
                 {MATERIAL_TYPE_OPTIONS.map((option) => (
-                  <option
+                <option
                     key={option.value}
                     value={option.value}
                     disabled={!availableFeatures.has(option.value)}
                   >
                     {option.label}
-                    {!availableFeatures.has(option.value) ? " - no disponible" : ""}
+                    {!availableFeatures.has(option.value) ? " - requiere Pro" : ""}
                   </option>
                 ))}
               </select>

@@ -128,14 +128,14 @@ export async function POST(request: NextRequest) {
     return buildUpgradeResponse("Tu prueba gratuita de IA ya fue utilizada.");
   }
 
-  if (!canUseFeature(aiState.planId, featureKey)) {
-    if (aiState.planId === "trial") {
-      return buildUpgradeResponse(
-        "Esta funcion no esta disponible durante la prueba gratuita.",
-      );
-    }
+    if (!canUseFeature(aiState.planId, featureKey)) {
+      if (aiState.planId === "trial") {
+        return buildUpgradeResponse(
+          "Para usar esta funcion necesitas el plan Pro.",
+        );
+      }
 
-    return buildUpgradeResponse("Mejora tu plan para usar esta funcion.");
+    return buildUpgradeResponse("Para usar esta funcion necesitas el plan Pro.");
   }
 
   const estimatedInputTokens = estimateTokens(body.sourceText);
