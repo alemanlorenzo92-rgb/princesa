@@ -141,7 +141,7 @@ export default function SubjectsPage() {
 
                 {colorMenuOpen ? (
                   <div className="absolute z-10 mt-2 w-full rounded-3xl border border-slate-200 bg-white p-3 shadow-lg">
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                    <div className="space-y-2">
                       {SUBJECT_COLOR_OPTIONS.map((option) => {
                         const selected = selectedColor === option.value;
 
@@ -153,14 +153,14 @@ export default function SubjectsPage() {
                               setSelectedColor(option.value);
                               setColorMenuOpen(false);
                             }}
-                            className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${
+                            className={`flex w-full items-center gap-4 rounded-2xl border px-3 py-2 text-xs font-medium transition ${
                               selected
                                 ? "border-slate-950 bg-slate-950 text-white"
                                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                             }`}
                           >
                             <span
-                              className="h-4 w-4 rounded-full ring-2 ring-white/70"
+                              className="h-7 w-7 shrink-0 rounded-full ring-2 ring-white/70"
                               style={{ backgroundColor: option.value }}
                             />
                             <span>{option.label}</span>
