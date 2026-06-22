@@ -1,65 +1,86 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { BookOpen, CalendarDays, Files, Sparkles } from "lucide-react";
+
+import { useAuth } from "@/hooks/use-auth";
+
+const highlights = [
+  {
+    title: "Dashboard semanal",
+    description: "Proximos examenes, entregas y accesos rapidos en una sola pantalla.",
+    icon: CalendarDays,
+  },
+  {
+    title: "Materias vivas",
+    description: "Cada materia con profesor, horarios, apuntes, materiales y color propio.",
+    icon: BookOpen,
+  },
+  {
+    title: "Archivos y apuntes",
+    description: "Subi PDFs o pegá texto y centraliza el estudio desde el celular.",
+    icon: Files,
+  },
+  {
+    title: "IA lista para estudiar",
+    description: "Genera resumenes, guias, flashcards y simulacros en segundos.",
+    icon: Sparkles,
+  },
+];
+
+export default function HomePage() {
+  const router = useRouter();
+  const { user } = useAuth();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-10 sm:px-6 lg:px-10">
+      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-[32px] border border-white/60 bg-white/80 p-8 shadow-soft backdrop-blur sm:p-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-coral-600">
+            Mobile-first PWA
           </p>
+          <h1 className="mt-4 max-w-xl font-display text-4xl font-semibold tracking-tight text-slate-950 sm:text-6xl">
+            Organiza tu carrera y estudia mejor desde el celular.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
+            Proyecto Princesa combina materias, calendario, apuntes y generacion con IA en una experiencia pensada como app nativa.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => router.push(user ? "/dashboard" : "/register")}
+              className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+            >
+              {user ? "Ir al dashboard" : "Crear mi cuenta"}
+            </button>
+            <Link
+              href={user ? "/ai" : "/login"}
+              className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700"
+            >
+              {user ? "Abrir generador IA" : "Ya tengo cuenta"}
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="grid gap-4">
+          {highlights.map((item) => {
+            const Icon = item.icon;
+            return (
+              <article
+                key={item.title}
+                className="rounded-[28px] border border-white/60 bg-white/75 p-5 shadow-soft backdrop-blur"
+              >
+                <div className="inline-flex rounded-2xl bg-coral-100 p-3 text-coral-600">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h2 className="mt-4 text-lg font-semibold text-slate-900">{item.title}</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
+              </article>
+            );
+          })}
         </div>
-      </main>
-    </div>
+      </section>
+    </main>
   );
 }
