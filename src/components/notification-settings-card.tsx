@@ -149,10 +149,17 @@ export function NotificationSettingsCard() {
       }
 
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-      });
+      let subscription;
+      try {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+      } catch {
+        throw new Error(
+          "Tu navegador no pudo activar las notificaciones. Instala la app o prueba en Chrome/Edge.",
+        );
+      }
 
       const response = await fetch("/api/notifications/subscriptions", {
         method: "POST",
@@ -245,6 +252,44 @@ export function NotificationSettingsCard() {
     }
   }
 
+  async function resetNotifications() {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        await fetch("/api/notifications/subscriptions", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            endpoint: subscription.endpoint,
+          }),
+        });
+        await subscription.unsubscribe();
+      }
+
+      setEnabled(false);
+      setPermission(Notification.permission);
+
+      await enableNotifications();
+      setMessage("Reiniciamos las notificaciones en este dispositivo.");
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : "No se pudo reiniciar las notificaciones.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const installationStatus = isInstalled
     ? "app instalada"
     : canInstall
@@ -257,6 +302,10 @@ export function NotificationSettingsCard() {
       ? "Conviene instalar la app para que los recordatorios sean mas confiables."
       : "Este dispositivo tiene soporte limitado para notificaciones push.";
 
+  const installHint = isInstalled
+    ? "Estás usando la app instalada. Desde aquí podés activar las notificaciones."
+    : "Descarga la app para activar notificaciones más estables y confiables.";
+
   return (
     <CardSection>
       <h2 className="text-lg font-semibold text-slate-950">Notificaciones</h2>
@@ -264,6 +313,10 @@ export function NotificationSettingsCard() {
         Puedes recibir avisos push de tus proximos eventos aunque no tengas la app
         abierta, siempre que el navegador y el dispositivo lo soporten.
       </p>
+
+      <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        {installHint}
+      </div>
 
       <div className="mt-4 space-y-2 text-sm text-slate-600">
         <p>Modo actual: {installationStatus}</p>
@@ -313,6 +366,13 @@ export function NotificationSettingsCard() {
           disabled={!supported || loading || busy || !enabled}
         >
           Desactivar
+        </SecondaryButton>
+        <SecondaryButton
+          type="button"
+          onClick={resetNotifications}
+          disabled={!supported || loading || busy}
+        >
+          Reiniciar notificaciones
         </SecondaryButton>
         <SecondaryButton
           type="button"
