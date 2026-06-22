@@ -20,6 +20,15 @@ export const SUBJECT_COLORS = [
   "#9575CD",
   "#F6BF26",
   "#81C784",
+  "#F06292",
+  "#26C6DA",
+  "#FFD54F",
+  "#A1887F",
+  "#7986CB",
+  "#AED581",
+  "#FFB74D",
+  "#90A4AE",
+  "#E57373",
 ];
 
 export const MATERIAL_TYPE_OPTIONS: Array<{

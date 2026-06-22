@@ -17,6 +17,24 @@ import { useAppData } from "@/hooks/use-app-data";
 import { SUBJECT_COLORS } from "@/lib/constants";
 import { Subject } from "@/types";
 
+const SUBJECT_COLOR_LABELS = {
+  "#FF8A65": "Coral",
+  "#4DB6AC": "Menta",
+  "#64B5F6": "Azul",
+  "#9575CD": "Lavanda",
+  "#F6BF26": "Dorado",
+  "#81C784": "Verde",
+  "#F06292": "Rosa",
+  "#26C6DA": "Turquesa",
+  "#FFD54F": "Amarillo",
+  "#A1887F": "Taupe",
+  "#7986CB": "Índigo",
+  "#AED581": "Lima",
+  "#FFB74D": "Naranja",
+  "#90A4AE": "Gris",
+  "#E57373": "Rojo",
+} as const;
+
 const initialForm = {
   name: "",
   description: "",
@@ -96,17 +114,35 @@ export default function SubjectsPage() {
               />
             </Field>
             <Field label="Color">
-              <select
-                name="color"
-                defaultValue={editing?.color || initialForm.color}
-                className={inputClassName()}
-              >
-                {SUBJECT_COLORS.map((color) => (
-                  <option key={color} value={color}>
-                    {color}
-                  </option>
-                ))}
-              </select>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                {SUBJECT_COLORS.map((color) => {
+                  const selected = (editing?.color || initialForm.color) === color;
+
+                  return (
+                    <label
+                      key={color}
+                      className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${
+                        selected
+                          ? "border-slate-950 bg-slate-950 text-white"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="color"
+                        value={color}
+                        defaultChecked={selected}
+                        className="sr-only"
+                      />
+                      <span
+                        className="h-4 w-4 rounded-full ring-2 ring-white/70"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span>{SUBJECT_COLOR_LABELS[color as keyof typeof SUBJECT_COLOR_LABELS]}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </Field>
             <div className="flex gap-3">
               <PrimaryButton type="submit">
@@ -140,6 +176,13 @@ export default function SubjectsPage() {
                       />
                       <div>
                         <h2 className="text-lg font-semibold text-slate-950">{subject.name}</h2>
+                        <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                          <span
+                            className="h-3 w-3 rounded-full"
+                            style={{ backgroundColor: subject.color }}
+                          />
+                          <span>{subject.color ? SUBJECT_COLOR_LABELS[subject.color as keyof typeof SUBJECT_COLOR_LABELS] || "Color" : "Color"}</span>
+                        </div>
                         <p className="mt-1 text-sm text-slate-500">
                           {subject.professor || "Profesor sin cargar"} -{" "}
                           {subject.schedule || "Horario sin cargar"}
