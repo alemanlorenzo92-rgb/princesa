@@ -18,7 +18,7 @@ const sora = Sora({
 });
 
 export const metadata: Metadata = {
-  title: "Proyecto Princesa",
+  title: "EstudioAI",
   description: "App mobile-first para organizar materias, fechas y estudio con IA.",
 };
 

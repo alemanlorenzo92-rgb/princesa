@@ -30,10 +30,10 @@ export default function DashboardPage() {
         description="Tu semana academica resumida, con foco en proximos vencimientos y accesos rapidos."
         action={
           <Link
-            href="/chat"
+            href="/study"
             className="rounded-2xl bg-coral-500 px-4 py-3 text-sm font-semibold text-white"
           >
-            Chat de estudio
+            Abrir Estudio
           </Link>
         }
       />
@@ -133,11 +133,8 @@ export default function DashboardPage() {
               <Link href="/calendar" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
                 Nueva fecha
               </Link>
-              <Link href="/files" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
-                Subir archivo
-              </Link>
-              <Link href="/chat" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
-                Abrir chat
+              <Link href="/study" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
+                Ir a Estudio
               </Link>
               <Link href="/materials" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
                 Ver materiales

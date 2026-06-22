@@ -102,7 +102,7 @@ export default function MaterialsPage() {
                         type="button"
                         onClick={() =>
                           exportMaterialToPdf({
-                            appName: "Proyecto Princesa",
+                            appName: "EstudioAI",
                             subjectName: subject?.name || "Materia sin nombre",
                             title: material.title,
                             createdAt: formatDate(material.createdAt),

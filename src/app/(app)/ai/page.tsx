@@ -225,7 +225,7 @@ export default function AiPage() {
     if (!resultMeta || !result) return;
     const subject = subjects.find((entry) => entry.id === resultMeta.subjectId);
     exportMaterialToPdf({
-      appName: "Proyecto Princesa",
+      appName: "EstudioAI",
       subjectName: subject?.name || "Materia sin nombre",
       title: resultMeta.title,
       createdAt: formatDate(new Date().toISOString()),

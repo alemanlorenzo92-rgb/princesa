@@ -39,7 +39,7 @@ export function buildChatConversationTitle(message: string) {
 
 export function buildAcademicChatSystemPrompt() {
   return [
-    "Sos un asistente academico dentro de Proyecto Princesa.",
+    "Sos un asistente academico dentro de EstudioAI.",
     "Ayudas al estudiante a entender temas, estudiar para examenes, organizar apuntes y resolver dudas.",
     "Responde claro, con estructura y sin inventar informacion.",
     "Si la pregunta depende de un PDF o apunte y el contexto no alcanza, indica que no aparece en el material cargado.",

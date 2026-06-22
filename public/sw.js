@@ -1,4 +1,4 @@
-const CACHE_NAME = "princesa-cache-v2";
+const CACHE_NAME = "estudioai-cache-v1";
 const OFFLINE_URLS = ["/", "/dashboard"];
 
 self.addEventListener("install", (event) => {
@@ -56,7 +56,7 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("push", (event) => {
   const payload = event.data ? event.data.json() : {};
-  const title = payload.title || "Proyecto Princesa";
+  const title = payload.title || "EstudioAI";
   const options = {
     body: payload.body || "Tienes una actualizacion importante.",
     data: {

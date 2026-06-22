@@ -3,14 +3,14 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/dashboard",
-    name: "Proyecto Princesa",
-    short_name: "Princesa",
+    name: "EstudioAI",
+    short_name: "EstudioAI",
     description: "Organiza materias, examenes y material de estudio con IA.",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
-    background_color: "#fff7f0",
-    theme_color: "#f1785a",
+    background_color: "#f8f4ef",
+    theme_color: "#0f172a",
     icons: [
       {
         src: "/icons/icon-192.png",

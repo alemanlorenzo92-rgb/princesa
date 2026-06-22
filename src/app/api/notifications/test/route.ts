@@ -39,7 +39,7 @@ export async function POST() {
       subscriptions.map((subscription) =>
         sendWebPushNotification(subscription, {
           title: "Recordatorios activados",
-          body: "Proyecto Princesa ya puede avisarte sobre tus proximos eventos.",
+          body: "EstudioAI ya puede avisarte sobre tus proximos eventos.",
           url: "/calendar",
           tag: "test-notification",
         }),
