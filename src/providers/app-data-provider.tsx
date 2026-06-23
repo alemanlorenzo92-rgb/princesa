@@ -33,8 +33,8 @@ import {
   updateStudyFile,
 } from "@/lib/services/study-files";
 import {
-  deleteStudyPdf,
-  uploadStudyPdf,
+  deleteStudyFile,
+  uploadStudyFile,
 } from "@/lib/services/storage-files";
 import {
   createSubject,
@@ -76,7 +76,7 @@ interface SaveMaterialPayload
 
 interface StudyDocumentInput
   extends Omit<StudyDocument, "id" | "userId" | "createdAt"> {
-  pdfFile?: File | null;
+  uploadedFile?: File | null;
 }
 
 interface ConversationInput {
@@ -256,17 +256,17 @@ export function AppDataProvider({
     input: StudyDocumentInput,
   ) {
     if (!user || !supabase) return;
-    const { pdfFile, ...documentInput } = input;
+    const { uploadedFile, ...documentInput } = input;
     let uploadedFilePath: string | null = null;
     let nextInput: Omit<StudyDocument, "id" | "userId" | "createdAt"> = {
       ...documentInput,
     };
 
     try {
-      if (pdfFile) {
-        const upload = await uploadStudyPdf(
+      if (uploadedFile) {
+        const upload = await uploadStudyFile(
           supabase,
-          pdfFile,
+          uploadedFile,
           user.id,
           documentInput.subjectId || undefined,
         );
@@ -293,7 +293,7 @@ export function AppDataProvider({
       await createStudyFile(supabase, user.id, nextInput);
     } catch (createError) {
       if (uploadedFilePath) {
-        await deleteStudyPdf(supabase, uploadedFilePath).catch(() => undefined);
+        await deleteStudyFile(supabase, uploadedFilePath).catch(() => undefined);
       }
       throw createError;
     }
@@ -306,8 +306,8 @@ export function AppDataProvider({
     input: StudyDocumentInput,
   ) {
     if (!supabase) return;
-    const { pdfFile, ...documentInput } = input;
-    void pdfFile;
+    const { uploadedFile, ...documentInput } = input;
+    void uploadedFile;
     await updateStudyFile(supabase, documentId, documentInput);
     await refresh();
   }

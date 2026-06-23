@@ -14,9 +14,13 @@ import {
 } from "@/components/forms";
 import { PageHeader } from "@/components/page-header";
 import { useAppData } from "@/hooks/use-app-data";
-import { MAX_STUDY_PDF_SIZE_BYTES } from "@/lib/pdf-config";
 import { hasExtractedText } from "@/lib/services/study-files";
-import { validatePdfFile } from "@/lib/services/storage-files";
+import { validateStudyFile } from "@/lib/services/storage-files";
+import {
+  canExtractTextFromStudyFile,
+  getStudyFileDisplayLabel,
+  MAX_STUDY_FILE_SIZE_BYTES,
+} from "@/lib/study-file-config";
 import { formatDate, truncateText } from "@/lib/utils";
 
 export default function FilesPage() {
@@ -31,7 +35,7 @@ export default function FilesPage() {
     error,
   } = useAppData();
   const fileInputId = useId();
-  const [selectedPdf, setSelectedPdf] = useState<File | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileWarning, setFileWarning] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,24 +47,27 @@ export default function FilesPage() {
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) {
-      setSelectedPdf(null);
+      setSelectedFile(null);
       setFileWarning("");
       return;
     }
 
     try {
-      validatePdfFile(file);
-      setSelectedPdf(file);
+      validateStudyFile(file);
+      setSelectedFile(file);
       setSubmitError("");
-      setFileWarning("Podras extraer el texto real del PDF una vez que termine la subida.");
+      setFileWarning(
+        canExtractTextFromStudyFile({ fileName: file.name, mimeType: file.type })
+          ? "Cuando termine la subida vas a poder extraer el texto del archivo."
+          : "El archivo se puede guardar y abrir. Si queres usar IA sobre su contenido, tal vez necesites pegar texto manual.",
+      );
     } catch (validationError) {
-      setSelectedPdf(null);
+      setSelectedFile(null);
       setFileWarning(
         validationError instanceof Error
           ? validationError.message
-          : "No se pudo validar el PDF seleccionado.",
+          : "No se pudo validar el archivo seleccionado.",
       );
-      return;
     }
   }
 
@@ -70,8 +77,8 @@ export default function FilesPage() {
     const sourceText = String(formData.get("sourceText") || "").trim();
     const subjectId = String(formData.get("subjectId") || "");
 
-    if (!selectedPdf && !sourceText) {
-      setSubmitError("Carga un PDF o pega un apunte manual para guardar el material.");
+    if (!selectedFile && !sourceText) {
+      setSubmitError("Carga un archivo o pega un apunte manual para guardar el material.");
       return;
     }
 
@@ -85,11 +92,11 @@ export default function FilesPage() {
         description: String(formData.get("description") || ""),
         sourceText,
         extractedText: "",
-        pdfFile: selectedPdf,
+        uploadedFile: selectedFile,
       });
 
       event.currentTarget.reset();
-      setSelectedPdf(null);
+      setSelectedFile(null);
       setFileWarning("");
     } catch (submissionError) {
       setSubmitError(
@@ -109,7 +116,7 @@ export default function FilesPage() {
       const signedUrl = await openDocument(documentId);
 
       if (!signedUrl) {
-        throw new Error("Este material no tiene un PDF asociado para abrir.");
+        throw new Error("Este material no tiene un archivo asociado para abrir.");
       }
 
       window.open(signedUrl, "_blank", "noopener,noreferrer");
@@ -117,7 +124,7 @@ export default function FilesPage() {
       setSubmitError(
         openError instanceof Error
           ? openError.message
-          : "No se pudo abrir el PDF seleccionado.",
+          : "No se pudo abrir el archivo seleccionado.",
       );
     } finally {
       setOpeningDocumentId(null);
@@ -139,7 +146,7 @@ export default function FilesPage() {
       setExtractFeedback(
         extractError instanceof Error
           ? extractError.message
-          : "No se pudo extraer texto del PDF seleccionado.",
+          : "No se pudo extraer texto del archivo seleccionado.",
       );
     } finally {
       setExtractingDocumentId(null);
@@ -166,8 +173,8 @@ export default function FilesPage() {
     <div>
       <PageHeader
         eyebrow="Archivos"
-        title="PDFs y apuntes"
-        description="Subí material de estudio o pegá texto para reutilizarlo en el generador de IA."
+        title="Archivos y apuntes"
+        description="Subi material de estudio en varios formatos o pega texto para reutilizarlo en el generador de IA."
       />
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
@@ -184,18 +191,17 @@ export default function FilesPage() {
                 ))}
               </select>
             </Field>
-            <Field label="Título">
+            <Field label="Titulo">
               <input name="title" required className={inputClassName()} />
             </Field>
-            <Field label="Descripción">
+            <Field label="Descripcion">
               <textarea name="description" className={textareaClassName()} />
             </Field>
-            <Field label="PDF opcional">
+            <Field label="Archivo opcional">
               <input
                 id={fileInputId}
-                name="pdf"
+                name="file"
                 type="file"
-                accept="application/pdf"
                 onChange={handleFileChange}
                 className={inputClassName("pt-2")}
               />
@@ -203,13 +209,13 @@ export default function FilesPage() {
             <Field label="Texto o apunte">
               <textarea
                 name="sourceText"
-                placeholder="Pegá acá texto del PDF, apuntes o fragmentos de clase. Si no subís PDF, este texto sigue funcionando como fuente para IA."
+                placeholder="Pega aca texto del archivo, apuntes o fragmentos de clase. Si no subis archivo, este texto sigue funcionando como fuente para IA."
                 className={textareaClassName("min-h-40")}
               />
             </Field>
             <p className="text-xs text-slate-500">
-              PDFs privados en Supabase Storage. Solo se aceptan `application/pdf` y hasta{" "}
-              {Math.floor(MAX_STUDY_PDF_SIZE_BYTES / 1024 / 1024)} MB.
+              Archivos privados en Supabase Storage. Se aceptan multiples formatos y hasta{" "}
+              {Math.floor(MAX_STUDY_FILE_SIZE_BYTES / 1024 / 1024)} MB.
             </p>
             {fileWarning ? <p className="text-sm text-amber-700">{fileWarning}</p> : null}
             {extractFeedback ? <p className="text-sm text-sky-700">{extractFeedback}</p> : null}
@@ -223,11 +229,18 @@ export default function FilesPage() {
         <div className="space-y-4">
           {error ? <EmptyState title="No se pudieron cargar los archivos" description={error} /> : null}
           {!error && loading ? (
-            <EmptyState title="Cargando archivos" description="Estamos trayendo tus apuntes y PDFs desde Supabase." />
+            <EmptyState
+              title="Cargando archivos"
+              description="Estamos trayendo tus apuntes y archivos desde Supabase."
+            />
           ) : null}
           {!error && !loading && documents.length
             ? documents.map((document) => {
                 const subject = subjects.find((entry) => entry.id === document.subjectId);
+                const canExtractText = canExtractTextFromStudyFile({
+                  fileName: document.fileName,
+                  fileType: document.fileType,
+                });
 
                 return (
                   <CardSection key={document.id}>
@@ -242,23 +255,29 @@ export default function FilesPage() {
                         </p>
                         <p className="mt-2 text-sm text-slate-500">
                           {document.filePath
-                            ? `PDF privado: ${document.fileName || "archivo.pdf"}`
+                            ? `${getStudyFileDisplayLabel({
+                              fileName: document.fileName,
+                              fileType: document.fileType,
+                              hasStoredFile: true,
+                            })}: ${document.fileName || "archivo"}`
                             : "Apunte manual"}{" "}
                           ·{" "}
                           {hasExtractedText(document)
-                            ? "Texto extraído listo"
+                            ? "Texto extraido listo"
                             : document.filePath
-                              ? "Sin texto extraído"
+                              ? "Sin texto extraido"
                               : "Listo para usar con texto manual"}
                         </p>
                         {document.filePath && !hasExtractedText(document) ? (
                           <p className="mt-2 text-sm text-amber-700">
-                            Este PDF todavía no tiene texto extraído.
+                            {canExtractText
+                              ? "Este archivo todavia no tiene texto extraido."
+                              : "Este formato se guardo correctamente, pero no admite extraccion automatica por ahora."}
                           </p>
                         ) : null}
                         {hasExtractedText(document) ? (
                           <p className="mt-2 text-sm text-slate-500">
-                            Texto extraído: {document.extractedText?.length || 0} caracteres.
+                            Texto extraido: {document.extractedText?.length || 0} caracteres.
                           </p>
                         ) : null}
                         {document.extractedText ? (
@@ -279,7 +298,7 @@ export default function FilesPage() {
                             onClick={() => void handleOpenDocument(document.id)}
                             disabled={openingDocumentId === document.id}
                           >
-                            {openingDocumentId === document.id ? "Abriendo..." : "Abrir PDF"}
+                            {openingDocumentId === document.id ? "Abriendo..." : "Abrir archivo"}
                           </SecondaryButton>
                         ) : null}
                         {document.filePath ? (
@@ -321,7 +340,7 @@ export default function FilesPage() {
           {!error && !loading && !documents.length ? (
             <EmptyState
               title="No hay archivos cargados"
-              description="Sube un PDF o pega un apunte para usarlo luego en el generador."
+              description="Sube un archivo o pega un apunte para usarlo luego en el generador."
             />
           ) : null}
         </div>

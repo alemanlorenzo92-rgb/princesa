@@ -221,7 +221,7 @@ values (
   'study-files',
   false,
   10485760,
-  array['application/pdf']
+  null
 )
 on conflict (id) do update
 set

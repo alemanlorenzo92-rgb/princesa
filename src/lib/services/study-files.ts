@@ -5,7 +5,11 @@ import {
   StudyDocument,
   StudyFileRecord,
 } from "@/types";
-import { deleteStudyPdf, getSignedStudyPdfUrl } from "@/lib/services/storage-files";
+import { getStoredStudyFileType } from "@/lib/study-file-config";
+import {
+  deleteStudyFile,
+  getSignedStudyFileUrl,
+} from "@/lib/services/storage-files";
 
 function mapStudyFile(record: StudyFileRecord): StudyDocument {
   return {
@@ -73,8 +77,12 @@ export async function createStudyFile(
       original_filename: input.fileName || null,
       extracted_text: input.extractedText || null,
       manual_text: input.sourceText || null,
-      file_type:
-        input.fileType || input.fileName?.split(".").pop() || (input.fileDataUrl ? "pdf" : "text"),
+      file_type: input.fileType
+        || getStoredStudyFileType({
+          fileName: input.fileName,
+          mimeType: input.fileDataUrl ? "application/octet-stream" : null,
+        })
+        || (input.fileDataUrl ? "file" : "text"),
     })
     .select("*")
     .maybeSingle();
@@ -139,7 +147,7 @@ export async function removeStudyFile(supabase: SupabaseClient, id: string) {
   const studyFile = await getStudyFileById(supabase, id);
 
   if (studyFile?.filePath) {
-    await deleteStudyPdf(supabase, studyFile.filePath);
+    await deleteStudyFile(supabase, studyFile.filePath);
   }
 
   const { error } = await supabase.from("study_files").delete().eq("id", id);
@@ -154,14 +162,14 @@ export async function getStudyFileSignedUrl(supabase: SupabaseClient, id: string
   }
 
   if (studyFile.filePath) {
-    return getSignedStudyPdfUrl(supabase, studyFile.filePath);
+    return getSignedStudyFileUrl(supabase, studyFile.filePath);
   }
 
   return studyFile.fileDataUrl || null;
 }
 
 export async function extractTextForStudyFile(fileId: string) {
-  const response = await fetch("/api/files/extract-pdf-text", {
+  const response = await fetch("/api/files/extract-text", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fileId }),
@@ -171,7 +179,7 @@ export async function extractTextForStudyFile(fileId: string) {
     const errorPayload = (await response.json().catch(() => null)) as
       | { error?: string }
       | null;
-    throw new Error(errorPayload?.error || "No se pudo extraer texto del PDF.");
+    throw new Error(errorPayload?.error || "No se pudo extraer texto del archivo.");
   }
 
   return (await response.json()) as ExtractStudyFileTextResponse;

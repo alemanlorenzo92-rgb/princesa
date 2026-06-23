@@ -1,3 +1,5 @@
-export const MAX_STUDY_PDF_SIZE_BYTES = 10 * 1024 * 1024;
+import { MAX_STUDY_FILE_SIZE_BYTES } from "@/lib/study-file-config";
+
+export const MAX_STUDY_PDF_SIZE_BYTES = MAX_STUDY_FILE_SIZE_BYTES;
 export const MAX_EXTRACTED_PDF_TEXT_CHARACTERS = 120_000;
 export const PDF_TEXT_PREVIEW_CHARACTERS = 240;

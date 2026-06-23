@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
 
   if (file && !canUseFeature(aiState.planId, "pdf_chat")) {
     return NextResponse.json(
-      { error: "Este chat con PDF esta disponible en planes pagos." },
+      { error: "Este chat con archivos esta disponible en planes pagos." },
       { status: 403 },
     );
   }
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "Ese archivo todavia no tiene texto disponible para el chat. Extrae el PDF o usa un apunte manual.",
+          "Ese archivo todavia no tiene texto disponible para el chat. Extrae el texto o usa un apunte manual.",
       },
       { status: 400 },
     );
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
       {
         error:
           file && aiState.planId === "trial"
-            ? "El contexto del PDF es demasiado largo para tu plan."
+            ? "El contexto del archivo es demasiado largo para tu plan."
             : "No tenes tokens suficientes para enviar este mensaje.",
       },
       { status: 400 },

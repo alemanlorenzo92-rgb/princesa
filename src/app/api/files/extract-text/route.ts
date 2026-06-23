@@ -5,14 +5,16 @@ import {
   MAX_EXTRACTED_PDF_TEXT_CHARACTERS,
   PDF_TEXT_PREVIEW_CHARACTERS,
 } from "@/lib/pdf-config";
-import { extractTextFromPdfBuffer } from "@/lib/server/pdf/extract-text";
+import {
+  canExtractStoredFileText,
+  extractTextFromStoredFile,
+} from "@/lib/server/files/extract-text";
 import {
   getStudyFileById,
   hasExtractedText,
   updateExtractedText,
 } from "@/lib/services/study-files";
 import { createClient } from "@/lib/supabase/server";
-import { StudyDocument } from "@/types";
 
 const requestSchema = z.object({
   fileId: z.string().uuid("Archivo no encontrado."),
@@ -22,10 +24,6 @@ export const runtime = "nodejs";
 
 function getPreview(text: string) {
   return text.slice(0, PDF_TEXT_PREVIEW_CHARACTERS).trim();
-}
-
-function isPdfDocument(file: StudyDocument) {
-  return file.fileType === "pdf" || file.fileName?.toLowerCase().endsWith(".pdf");
 }
 
 export async function POST(request: NextRequest) {
@@ -83,17 +81,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!isPdfDocument(studyFile)) {
+  if (!studyFile.filePath) {
     return NextResponse.json(
-      { error: "Este archivo no es un PDF." },
-      { status: 400 },
+      { error: "Este material no tiene un archivo guardado en Storage." },
+      { status: 404 },
     );
   }
 
-  if (!studyFile.filePath) {
+  if (!canExtractStoredFileText(studyFile)) {
     return NextResponse.json(
-      { error: "Archivo no encontrado." },
-      { status: 404 },
+      {
+        error:
+          "Este formato se puede subir y abrir, pero por ahora no se puede extraer texto automaticamente.",
+      },
+      { status: 400 },
     );
   }
 
@@ -111,20 +112,23 @@ export async function POST(request: NextRequest) {
 
   if (error || !data) {
     return NextResponse.json(
-      { error: "No se pudo descargar el PDF desde Storage." },
+      { error: "No se pudo descargar el archivo desde Storage." },
       { status: 502 },
     );
   }
 
   try {
     const arrayBuffer = await data.arrayBuffer();
-    const { text, wasTruncated } = await extractTextFromPdfBuffer(Buffer.from(arrayBuffer));
+    const { text, wasTruncated } = await extractTextFromStoredFile(
+      studyFile,
+      Buffer.from(arrayBuffer),
+    );
 
     if (!text.trim()) {
       return NextResponse.json(
         {
           error:
-            "El PDF parece estar escaneado o no contiene texto seleccionable.",
+            "No se encontro texto util en el archivo. Puede ser un archivo escaneado, vacio o no compatible.",
         },
         { status: 422 },
       );
@@ -141,10 +145,10 @@ export async function POST(request: NextRequest) {
         : undefined,
     });
   } catch (extractError) {
-    console.error("PDF text extraction failed", extractError);
+    console.error("File text extraction failed", extractError);
 
     return NextResponse.json(
-      { error: "No se pudo extraer texto del PDF." },
+      { error: "No se pudo extraer texto del archivo." },
       { status: 500 },
     );
   }

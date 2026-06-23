@@ -10,6 +10,10 @@ import { PageHeader } from "@/components/page-header";
 import { useAppData } from "@/hooks/use-app-data";
 import { EVENT_TYPE_LABELS } from "@/lib/constants";
 import { hasExtractedText } from "@/lib/services/study-files";
+import {
+  canExtractTextFromStudyFile,
+  getStudyFileDisplayLabel,
+} from "@/lib/study-file-config";
 import { formatDate, truncateText } from "@/lib/utils";
 
 export default function SubjectDetailPage({
@@ -18,8 +22,16 @@ export default function SubjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { subjects, events, documents, materials, openDocument, extractDocumentText, loading, error } =
-    useAppData();
+  const {
+    subjects,
+    events,
+    documents,
+    materials,
+    openDocument,
+    extractDocumentText,
+    loading,
+    error,
+  } = useAppData();
   const subject = subjects.find((entry) => entry.id === id);
   const [documentError, setDocumentError] = useState("");
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
@@ -61,7 +73,7 @@ export default function SubjectDetailPage({
       const signedUrl = await openDocument(documentId);
 
       if (!signedUrl) {
-        throw new Error("Este material no tiene un PDF asociado para abrir.");
+        throw new Error("Este material no tiene un archivo asociado para abrir.");
       }
 
       window.open(signedUrl, "_blank", "noopener,noreferrer");
@@ -69,7 +81,7 @@ export default function SubjectDetailPage({
       setDocumentError(
         openError instanceof Error
           ? openError.message
-          : "No se pudo abrir el PDF seleccionado.",
+          : "No se pudo abrir el archivo seleccionado.",
       );
     } finally {
       setOpeningDocumentId(null);
@@ -90,7 +102,7 @@ export default function SubjectDetailPage({
       setDocumentError(
         extractError instanceof Error
           ? extractError.message
-          : "No se pudo extraer texto del PDF seleccionado.",
+          : "No se pudo extraer texto del archivo seleccionado.",
       );
     } finally {
       setExtractingDocumentId(null);
@@ -160,85 +172,98 @@ export default function SubjectDetailPage({
           {extractFeedback ? <p className="mt-3 text-sm text-sky-700">{extractFeedback}</p> : null}
           <div className="mt-4 space-y-3">
             {subjectDocuments.length ? (
-              subjectDocuments.map((document) => (
-                <article key={document.id} className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">{document.title}</p>
-                  <p className="mt-2 text-sm text-slate-600">
-                    {truncateText(document.description || "Sin descripcion")}
-                  </p>
-                  <p className="mt-3 text-sm text-slate-500">
-                    {document.filePath
-                      ? `PDF asociado: ${document.fileName || "archivo.pdf"}`
-                      : "Apunte manual asociado"}
-                  </p>
-                  {document.filePath && !hasExtractedText(document) ? (
-                    <p className="mt-2 text-sm text-amber-700">
-                      Este PDF todavia no tiene texto extraido.
+              subjectDocuments.map((document) => {
+                const canExtractText = canExtractTextFromStudyFile({
+                  fileName: document.fileName,
+                  fileType: document.fileType,
+                });
+
+                return (
+                  <article key={document.id} className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900">{document.title}</p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {truncateText(document.description || "Sin descripcion")}
                     </p>
-                  ) : null}
-                  {hasExtractedText(document) ? (
-                    <p className="mt-2 text-sm text-slate-500">
-                      Texto extraido disponible: {document.extractedText?.length || 0} caracteres.
+                    <p className="mt-3 text-sm text-slate-500">
+                      {document.filePath
+                        ? `${getStudyFileDisplayLabel({
+                          fileName: document.fileName,
+                          fileType: document.fileType,
+                          hasStoredFile: true,
+                        })}: ${document.fileName || "archivo"}`
+                        : "Apunte manual asociado"}
                     </p>
-                  ) : null}
-                  {document.extractedText ? (
-                    <p className="mt-2 text-sm text-slate-500">
-                      Preview: {truncateText(document.extractedText, 180)}
-                    </p>
-                  ) : null}
-                  {document.sourceText ? (
-                    <p className="mt-2 text-sm text-slate-500">
-                      {truncateText(document.sourceText, 110)}
-                    </p>
-                  ) : null}
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {document.filePath || document.fileDataUrl ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleOpenDocument(document.id)}
-                        disabled={openingDocumentId === document.id}
+                    {document.filePath && !hasExtractedText(document) ? (
+                      <p className="mt-2 text-sm text-amber-700">
+                        {canExtractText
+                          ? "Este archivo todavia no tiene texto extraido."
+                          : "Este formato se guardo correctamente, pero no admite extraccion automatica por ahora."}
+                      </p>
+                    ) : null}
+                    {hasExtractedText(document) ? (
+                      <p className="mt-2 text-sm text-slate-500">
+                        Texto extraido disponible: {document.extractedText?.length || 0} caracteres.
+                      </p>
+                    ) : null}
+                    {document.extractedText ? (
+                      <p className="mt-2 text-sm text-slate-500">
+                        Preview: {truncateText(document.extractedText, 180)}
+                      </p>
+                    ) : null}
+                    {document.sourceText ? (
+                      <p className="mt-2 text-sm text-slate-500">
+                        {truncateText(document.sourceText, 110)}
+                      </p>
+                    ) : null}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {document.filePath || document.fileDataUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleOpenDocument(document.id)}
+                          disabled={openingDocumentId === document.id}
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+                        >
+                          {openingDocumentId === document.id ? "Abriendo..." : "Abrir archivo"}
+                        </button>
+                      ) : null}
+                      {document.filePath ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleExtractDocument(document.id)}
+                          disabled={extractingDocumentId === document.id}
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {extractingDocumentId === document.id
+                            ? "Extrayendo..."
+                            : hasExtractedText(document)
+                              ? "Reextraer texto"
+                              : "Extraer texto"}
+                        </button>
+                      ) : null}
+                      <Link
+                        href={`/chat?subjectId=${subject.id}&fileId=${document.id}`}
                         className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
                       >
-                        {openingDocumentId === document.id ? "Abriendo..." : "Abrir PDF"}
-                      </button>
-                    ) : null}
-                    {document.filePath ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleExtractDocument(document.id)}
-                        disabled={extractingDocumentId === document.id}
-                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                        Chatear sobre este archivo
+                      </Link>
+                      <Link
+                        href={
+                          hasExtractedText(document) || document.sourceText
+                            ? `/ai?subjectId=${subject.id}&documentId=${document.id}`
+                            : "/ai"
+                        }
+                        className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                       >
-                        {extractingDocumentId === document.id
-                          ? "Extrayendo..."
-                          : hasExtractedText(document)
-                            ? "Reextraer texto"
-                            : "Extraer texto"}
-                      </button>
-                    ) : null}
-                    <Link
-                      href={`/chat?subjectId=${subject.id}&fileId=${document.id}`}
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
-                    >
-                      Chatear sobre este archivo
-                    </Link>
-                    <Link
-                      href={
-                        hasExtractedText(document) || document.sourceText
-                          ? `/ai?subjectId=${subject.id}&documentId=${document.id}`
-                          : "/ai"
-                      }
-                      className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                    >
-                      Generar material
-                    </Link>
-                  </div>
-                </article>
-              ))
+                        Generar material
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })
             ) : (
               <EmptyState
                 title="No hay archivos cargados"
-                description="Sube un PDF o pega texto desde la seccion Archivos."
+                description="Sube un archivo o pega texto desde la seccion Archivos."
               />
             )}
           </div>

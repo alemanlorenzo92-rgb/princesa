@@ -56,7 +56,9 @@ export default function AiPage() {
     style: (typeof STYLE_OPTIONS)[number]["value"];
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [lastUsage, setLastUsage] = useState<GenerateMaterialResponse["usage"] | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState(
     searchParams.get("subjectId") || "",
   );
@@ -145,6 +147,7 @@ export default function AiPage() {
       setLoading(true);
       setError("");
       setLastUsageMessage("");
+      setSaveFeedback("");
       const response = await generateMaterial({
         subjectId,
         documentId: documentId || undefined,
@@ -197,7 +200,7 @@ export default function AiPage() {
       setDocumentNotice(
         extractError instanceof Error
           ? extractError.message
-          : "No se pudo extraer texto del PDF seleccionado.",
+          : "No se pudo extraer texto del archivo seleccionado.",
       );
     } finally {
       setExtractingDocumentId(null);
@@ -206,19 +209,33 @@ export default function AiPage() {
 
   async function saveCurrentMaterial() {
     if (!resultMeta || !result) return;
-    await saveMaterial({
-      subjectId: resultMeta.subjectId,
-      documentId: resultMeta.documentId,
-      title: resultMeta.title,
-      type: resultMeta.type,
-      detailLevel: resultMeta.detailLevel,
-      style: resultMeta.style,
-      content: result,
-      model: lastUsage?.model,
-      inputTokens: lastUsage?.inputTokens,
-      outputTokens: lastUsage?.outputTokens,
-      totalTokens: lastUsage?.totalTokens,
-    });
+
+    try {
+      setSaving(true);
+      setSaveFeedback("");
+      await saveMaterial({
+        subjectId: resultMeta.subjectId,
+        documentId: resultMeta.documentId,
+        title: resultMeta.title,
+        type: resultMeta.type,
+        detailLevel: resultMeta.detailLevel,
+        style: resultMeta.style,
+        content: result,
+        model: lastUsage?.model,
+        inputTokens: lastUsage?.inputTokens,
+        outputTokens: lastUsage?.outputTokens,
+        totalTokens: lastUsage?.totalTokens,
+      });
+      setSaveFeedback("Material guardado correctamente.");
+    } catch (saveError) {
+      setSaveFeedback(
+        saveError instanceof Error
+          ? saveError.message
+          : "No se pudo guardar el material generado.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function exportCurrentMaterial() {
@@ -467,7 +484,7 @@ export default function AiPage() {
             {result ? (
               <div className="flex gap-2">
                 <SecondaryButton type="button" onClick={saveCurrentMaterial}>
-                  Guardar
+                  {saving ? "Guardando..." : "Guardar"}
                 </SecondaryButton>
                 <PrimaryButton type="button" onClick={exportCurrentMaterial}>
                   Descargar PDF
@@ -481,6 +498,17 @@ export default function AiPage() {
               {lastUsageMessage ? (
                 <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
                   {lastUsageMessage}
+                </div>
+              ) : null}
+              {saveFeedback ? (
+                <div
+                  className={`rounded-2xl px-4 py-3 text-sm ${
+                    saveFeedback.includes("correctamente")
+                      ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border border-red-200 bg-red-50 text-red-700"
+                  }`}
+                >
+                  {saveFeedback}
                 </div>
               ) : null}
               <pre className="whitespace-pre-wrap rounded-3xl bg-slate-950 p-5 text-sm leading-7 text-slate-50">

@@ -1,6 +1,9 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
-import { MAX_STUDY_PDF_SIZE_BYTES } from "@/lib/pdf-config";
+import {
+  getStoredStudyFileType,
+  MAX_STUDY_FILE_SIZE_BYTES,
+} from "@/lib/study-file-config";
 
 export const STUDY_FILES_BUCKET = "study-files";
 const SIGNED_URL_EXPIRATION_SECONDS = 60 * 10;
@@ -14,25 +17,20 @@ function normalizeStudyFileName(fileName: string) {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 
-  return normalized || "archivo.pdf";
+  return normalized || "archivo";
 }
 
 export function sanitizeFileName(fileName: string) {
-  const normalized = normalizeStudyFileName(fileName);
-  return normalized.endsWith(".pdf") ? normalized : `${normalized}.pdf`;
+  return normalizeStudyFileName(fileName);
 }
 
-export function validatePdfFile(file: File) {
+export function validateStudyFile(file: File) {
   if (!file) {
-    throw new Error("Selecciona un archivo PDF antes de continuar.");
+    throw new Error("Selecciona un archivo antes de continuar.");
   }
 
-  if (file.type !== "application/pdf") {
-    throw new Error("Solo se permiten archivos PDF con tipo application/pdf.");
-  }
-
-  if (file.size > MAX_STUDY_PDF_SIZE_BYTES) {
-    throw new Error("El PDF supera el limite de 10 MB permitido por ahora.");
+  if (file.size > MAX_STUDY_FILE_SIZE_BYTES) {
+    throw new Error("El archivo supera el limite de 10 MB permitido por ahora.");
   }
 }
 
@@ -59,13 +57,13 @@ function ensureOwnStudyFilePath(filePath: string, userId: string) {
   }
 }
 
-export async function uploadStudyPdf(
+export async function uploadStudyFile(
   supabase: SupabaseClient,
   file: File,
   userId: string,
   subjectId?: string,
 ) {
-  validatePdfFile(file);
+  validateStudyFile(file);
 
   const sessionUserId = await getAuthenticatedUserId(supabase);
   if (sessionUserId !== userId) {
@@ -80,33 +78,36 @@ export async function uploadStudyPdf(
     .from(STUDY_FILES_BUCKET)
     .upload(filePath, file, {
       cacheControl: "3600",
-      contentType: "application/pdf",
+      contentType: file.type || undefined,
       upsert: false,
     });
 
   if (error) {
-    throw new Error(`No se pudo subir el PDF a Supabase Storage: ${error.message}`);
+    throw new Error(`No se pudo subir el archivo a Supabase Storage: ${error.message}`);
   }
 
   return {
     filePath,
     originalFileName: file.name,
-    fileType: "pdf",
+    fileType: getStoredStudyFileType({
+      fileName: file.name,
+      mimeType: file.type,
+    }),
   };
 }
 
-export async function deleteStudyPdf(supabase: SupabaseClient, filePath: string) {
+export async function deleteStudyFile(supabase: SupabaseClient, filePath: string) {
   const sessionUserId = await getAuthenticatedUserId(supabase);
   ensureOwnStudyFilePath(filePath, sessionUserId);
 
   const { error } = await supabase.storage.from(STUDY_FILES_BUCKET).remove([filePath]);
 
   if (error) {
-    throw new Error(`No se pudo eliminar el PDF de Supabase Storage: ${error.message}`);
+    throw new Error(`No se pudo eliminar el archivo de Supabase Storage: ${error.message}`);
   }
 }
 
-export async function getSignedStudyPdfUrl(
+export async function getSignedStudyFileUrl(
   supabase: SupabaseClient,
   filePath: string,
 ) {
@@ -119,7 +120,7 @@ export async function getSignedStudyPdfUrl(
 
   if (error || !data?.signedUrl) {
     throw new Error(
-      `No se pudo generar una URL firmada para el PDF: ${error?.message || "URL vacia."}`,
+      `No se pudo generar una URL firmada para el archivo: ${error?.message || "URL vacia."}`,
     );
   }
 
