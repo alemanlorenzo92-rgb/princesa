@@ -159,6 +159,19 @@ interface AppDataContextValue {
 
 export const AppDataContext = createContext<AppDataContextValue | null>(null);
 
+async function createUserActivityLogSafely(
+  supabase: ReturnType<typeof createClient> | null,
+  input: Parameters<typeof createUserActivityLog>[1],
+) {
+  if (!supabase) return;
+
+  try {
+    await createUserActivityLog(supabase, input);
+  } catch (error) {
+    console.warn("User activity log skipped", error);
+  }
+}
+
 export function AppDataProvider({
   children,
 }: {
@@ -229,7 +242,7 @@ export function AppDataProvider({
   async function addSubject(input: Omit<Subject, "id" | "userId" | "createdAt">) {
     if (!user || !supabase) return null;
     const subject = await createSubject(supabase, user.id, input);
-    await createUserActivityLog(supabase, {
+    await createUserActivityLogSafely(supabase, {
       userId: user.id,
       action: "subject_created",
       entityType: "subject",
@@ -279,7 +292,7 @@ export function AppDataProvider({
     if (!user || !supabase) return;
     const current = subjects.find((subject) => subject.id === subjectId);
     await removeSubject(supabase, subjectId);
-    await createUserActivityLog(supabase, {
+    await createUserActivityLogSafely(supabase, {
       userId: user.id,
       action: "subject_deleted",
       entityType: "subject",
@@ -351,7 +364,7 @@ export function AppDataProvider({
       }
 
       const createdDocument = await createStudyFile(supabase, user.id, nextInput);
-      await createUserActivityLog(supabase, {
+      await createUserActivityLogSafely(supabase, {
         userId: user.id,
         action: "file_uploaded",
         entityType: "study_file",
@@ -384,7 +397,7 @@ export function AppDataProvider({
     if (!user || !supabase) return;
     const current = documents.find((document) => document.id === documentId);
     await removeStudyFile(supabase, documentId);
-    await createUserActivityLog(supabase, {
+    await createUserActivityLogSafely(supabase, {
       userId: user.id,
       action: "file_deleted",
       entityType: "study_file",
@@ -404,7 +417,7 @@ export function AppDataProvider({
     const result = await extractTextForStudyFile(documentId);
     if (user && supabase) {
       const current = documents.find((document) => document.id === documentId);
-      await createUserActivityLog(supabase, {
+      await createUserActivityLogSafely(supabase, {
         userId: user.id,
         action: "file_text_extracted",
         entityType: "study_file",
@@ -433,7 +446,7 @@ export function AppDataProvider({
     }
 
     const conversation = await createConversation(supabase, user.id, input);
-    await createUserActivityLog(supabase, {
+    await createUserActivityLogSafely(supabase, {
       userId: user.id,
       action: "chat_conversation_created",
       entityType: "conversation",
@@ -455,7 +468,7 @@ export function AppDataProvider({
     if (!user || !supabase) return;
     const current = await getConversationById(supabase, conversationId);
     await deleteConversationRecord(supabase, conversationId);
-    await createUserActivityLog(supabase, {
+    await createUserActivityLogSafely(supabase, {
       userId: user.id,
       action: "chat_conversation_deleted",
       entityType: "conversation",
@@ -549,7 +562,7 @@ export function AppDataProvider({
       }
 
       const material = await createGeneratedMaterial(supabase, user.id, nextInput);
-      await createUserActivityLog(supabase, {
+      await createUserActivityLogSafely(supabase, {
         userId: user.id,
         action: "material_saved",
         entityType: "generated_material",
@@ -580,7 +593,7 @@ export function AppDataProvider({
     if (!user || !supabase) return;
     const current = materials.find((material) => material.id === materialId);
     await removeGeneratedMaterial(supabase, materialId);
-    await createUserActivityLog(supabase, {
+    await createUserActivityLogSafely(supabase, {
       userId: user.id,
       action: "material_deleted",
       entityType: "generated_material",
