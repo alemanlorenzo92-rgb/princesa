@@ -172,6 +172,19 @@ async function createUserActivityLogSafely(
   }
 }
 
+function getSettledValue<T>(
+  result: PromiseSettledResult<T>,
+  fallback: T,
+  label: string,
+) {
+  if (result.status === "fulfilled") {
+    return result.value;
+  }
+
+  console.warn(`${label} skipped`, result.reason);
+  return fallback;
+}
+
 export function AppDataProvider({
   children,
 }: {
@@ -208,20 +221,37 @@ export function AppDataProvider({
     try {
       setLoading(true);
       setError("");
-      const [nextSubjects, nextEvents, nextDocuments, nextMaterials, nextActivityLogs] =
-        await Promise.all([
-          getAllSubjects(supabase),
-          getAllAcademicEvents(supabase),
-          getAllStudyFiles(supabase),
-          getAllGeneratedMaterials(supabase),
-          getUserActivityLogs(supabase),
-        ]);
+      const [
+        nextSubjectsResult,
+        nextEventsResult,
+        nextDocumentsResult,
+        nextMaterialsResult,
+        nextActivityLogsResult,
+      ] = await Promise.allSettled([
+        getAllSubjects(supabase),
+        getAllAcademicEvents(supabase),
+        getAllStudyFiles(supabase),
+        getAllGeneratedMaterials(supabase),
+        getUserActivityLogs(supabase),
+      ]);
 
-      setSubjects(nextSubjects);
-      setEvents(nextEvents);
-      setDocuments(nextDocuments);
-      setMaterials(nextMaterials);
-      setActivityLogs(nextActivityLogs);
+      if (nextSubjectsResult.status === "rejected") {
+        throw nextSubjectsResult.reason;
+      }
+
+      if (nextEventsResult.status === "rejected") {
+        throw nextEventsResult.reason;
+      }
+
+      if (nextDocumentsResult.status === "rejected") {
+        throw nextDocumentsResult.reason;
+      }
+
+      setSubjects(nextSubjectsResult.value);
+      setEvents(nextEventsResult.value);
+      setDocuments(nextDocumentsResult.value);
+      setMaterials(getSettledValue(nextMaterialsResult, [], "Generated materials refresh"));
+      setActivityLogs(getSettledValue(nextActivityLogsResult, [], "User activity refresh"));
     } catch (refreshError) {
       setError(
         refreshError instanceof Error
