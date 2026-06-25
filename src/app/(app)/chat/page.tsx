@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { CardSection } from "@/components/card-section";
@@ -16,8 +16,17 @@ import { PageHeader } from "@/components/page-header";
 import { useAppData } from "@/hooks/use-app-data";
 import { useAuth } from "@/hooks/use-auth";
 import { canUseFeature } from "@/lib/plans";
+import { hasExtractedText } from "@/lib/services/study-files";
+import { validateStudyFile } from "@/lib/services/storage-files";
+import { canExtractTextFromStudyFile } from "@/lib/study-file-config";
 import { formatDate } from "@/lib/utils";
-import { AiConversation, AiMessage } from "@/types";
+import { AiConversation, AiMessage, StudyDocument } from "@/types";
+
+function isStudyDocument(
+  document: StudyDocument | undefined,
+): document is StudyDocument {
+  return Boolean(document);
+}
 
 export default function ChatPage() {
   const searchParams = useSearchParams();
@@ -25,6 +34,9 @@ export default function ChatPage() {
   const {
     subjects,
     documents,
+    addDocument,
+    ensureSubject,
+    extractDocumentText,
     getChatConversations,
     getChatMessages,
     createChatConversation,
@@ -38,10 +50,14 @@ export default function ChatPage() {
   const [selectedSubjectId, setSelectedSubjectId] = useState(
     searchParams.get("subjectId") || "",
   );
-  const [selectedFileId, setSelectedFileId] = useState(searchParams.get("fileId") || "");
+  const [subjectNameInput, setSubjectNameInput] = useState("");
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>(
+    searchParams.get("fileId") ? [searchParams.get("fileId") || ""] : [],
+  );
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -50,7 +66,9 @@ export default function ChatPage() {
   const selectedConversation = conversations.find(
     (conversation) => conversation.id === selectedConversationId,
   );
-  const selectedFile = documents.find((document) => document.id === selectedFileId);
+  const selectedFiles = selectedFileIds
+    .map((fileId) => documents.find((document) => document.id === fileId))
+    .filter(isStudyDocument);
   const filteredDocuments = selectedSubjectId
     ? documents.filter((document) => document.subjectId === selectedSubjectId)
     : documents;
@@ -77,11 +95,97 @@ export default function ChatPage() {
     void loadInitialData();
   }, [getChatConversations]);
 
+  async function resolveSubject() {
+    if (selectedSubjectId) {
+      const selected = subjects.find((entry) => entry.id === selectedSubjectId);
+      return {
+        subjectId: selectedSubjectId,
+        subjectName: selected?.name || subjectNameInput.trim(),
+      };
+    }
+
+    if (!subjectNameInput.trim()) {
+      return { subjectId: "", subjectName: "" };
+    }
+
+    const ensuredSubject = await ensureSubject(subjectNameInput);
+    if (!ensuredSubject) {
+      return { subjectId: "", subjectName: subjectNameInput.trim() };
+    }
+
+    setSelectedSubjectId(ensuredSubject.id);
+    setSubjectNameInput(ensuredSubject.name);
+    return {
+      subjectId: ensuredSubject.id,
+      subjectName: ensuredSubject.name,
+    };
+  }
+
+  async function handleInlineUpload(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    try {
+      setUploadingFile(true);
+      setError("");
+      setNotice("");
+      const subject = await resolveSubject();
+      const createdIds: string[] = [];
+
+      for (const file of files) {
+        validateStudyFile(file);
+
+        const createdDocument = await addDocument({
+          subjectId: subject.subjectId,
+          title: file.name.replace(/\.[^.]+$/, "") || file.name,
+          description: "Archivo cargado desde chat de estudio.",
+          sourceText: "",
+          extractedText: "",
+          uploadedFile: file,
+        });
+
+        if (!createdDocument) {
+          throw new Error("No se pudo guardar uno de los archivos.");
+        }
+
+        createdIds.push(createdDocument.id);
+
+        if (
+          createdDocument.filePath
+          && canExtractTextFromStudyFile({
+            fileName: createdDocument.fileName,
+            fileType: createdDocument.fileType,
+          })
+        ) {
+          await extractDocumentText(createdDocument.id);
+        }
+      }
+
+      setSelectedFileIds((current) => Array.from(new Set([...current, ...createdIds])));
+      setNotice(
+        files.length === 1
+          ? "Archivo cargado correctamente."
+          : `${files.length} archivos cargados correctamente.`,
+      );
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "No se pudo cargar el archivo desde el chat.",
+      );
+    } finally {
+      setUploadingFile(false);
+      event.target.value = "";
+    }
+  }
+
   async function loadConversation(conversation: AiConversation) {
     try {
       setSelectedConversationId(conversation.id);
       setSelectedSubjectId(conversation.subjectId || "");
-      setSelectedFileId(conversation.fileId || "");
+      const selected = subjects.find((subject) => subject.id === conversation.subjectId);
+      setSubjectNameInput(selected?.name || "");
+      setSelectedFileIds(conversation.fileId ? [conversation.fileId] : []);
       setError("");
       const nextMessages = await getChatMessages(conversation.id);
       setMessages(nextMessages);
@@ -110,10 +214,11 @@ export default function ChatPage() {
   async function handleCreateConversation() {
     try {
       setError("");
+      const subject = await resolveSubject();
       const conversation = await createChatConversation({
-        title: "Nueva conversación",
-        subjectId: selectedSubjectId || undefined,
-        fileId: selectedFileId || undefined,
+        title: "Nueva conversacion",
+        subjectId: subject.subjectId || undefined,
+        fileId: selectedFileIds[0] || undefined,
       });
       await refreshConversations(conversation.id);
       setMessages([]);
@@ -121,13 +226,13 @@ export default function ChatPage() {
       setError(
         createError instanceof Error
           ? createError.message
-          : "No se pudo crear la conversación.",
+          : "No se pudo crear la conversacion.",
       );
     }
   }
 
   async function handleRenameConversation(conversationId: string, currentTitle: string) {
-    const nextTitle = window.prompt("Nuevo título para la conversación", currentTitle)?.trim();
+    const nextTitle = window.prompt("Nuevo titulo para la conversacion", currentTitle)?.trim();
     if (!nextTitle) return;
 
     try {
@@ -138,7 +243,7 @@ export default function ChatPage() {
       setError(
         renameError instanceof Error
           ? renameError.message
-          : "No se pudo renombrar la conversación.",
+          : "No se pudo renombrar la conversacion.",
       );
     }
   }
@@ -157,7 +262,7 @@ export default function ChatPage() {
       setError(
         deleteError instanceof Error
           ? deleteError.message
-          : "No se pudo eliminar la conversación.",
+          : "No se pudo eliminar la conversacion.",
       );
     }
   }
@@ -170,10 +275,12 @@ export default function ChatPage() {
       setSending(true);
       setError("");
       setNotice("");
+      const subject = await resolveSubject();
       const response = await sendChatMessage({
         conversationId: selectedConversationId || undefined,
-        subjectId: selectedSubjectId || undefined,
-        fileId: selectedFileId || undefined,
+        subjectId: subject.subjectId || undefined,
+        fileId: selectedFileIds[0] || undefined,
+        fileIds: selectedFileIds,
         message: draft.trim(),
       });
 
@@ -199,19 +306,19 @@ export default function ChatPage() {
       <PageHeader
         eyebrow="IA"
         title="Chat de estudio"
-        description="Hacé preguntas sobre una materia, un PDF o un apunte y seguí la conversación desde un solo lugar."
+        description="Hace preguntas sobre una materia, crea la materia al vuelo si hace falta y subi archivos sin salir del chat."
         action={
           <PrimaryButton type="button" onClick={() => void handleCreateConversation()}>
-            Nueva conversación
+            Nueva conversacion
           </PrimaryButton>
         }
       />
 
       {planId === "expired_trial" ? (
         <CardSection>
-          <p className="text-lg font-semibold text-slate-950">Tu prueba gratuita de IA ya terminó</p>
+          <p className="text-lg font-semibold text-slate-950">Tu prueba gratuita de IA ya termino</p>
           <p className="mt-2 text-sm text-slate-600">
-            Mejorá tu plan para seguir usando el chat de estudio.
+            Mejora tu plan para seguir usando el chat de estudio.
           </p>
           <Link
             href="/settings"
@@ -235,12 +342,16 @@ export default function ChatPage() {
           </div>
 
           <div className="mt-4 space-y-3">
-            <Field label="Materia opcional">
+            <Field label="Materia existente">
               <select
                 value={selectedSubjectId}
                 onChange={(event) => {
                   setSelectedSubjectId(event.target.value);
-                  setSelectedFileId("");
+                  const selected = subjects.find((subject) => subject.id === event.target.value);
+                  if (selected) {
+                    setSubjectNameInput(selected.name);
+                  }
+                  setSelectedFileIds([]);
                 }}
                 className={inputClassName()}
               >
@@ -253,13 +364,25 @@ export default function ChatPage() {
               </select>
             </Field>
 
-            <Field label="Archivo o apunte opcional">
-              <select
-                value={selectedFileId}
-                onChange={(event) => setSelectedFileId(event.target.value)}
+            <Field label="Nombre de materia">
+              <input
+                value={subjectNameInput}
+                onChange={(event) => setSubjectNameInput(event.target.value)}
+                placeholder="Escribi una materia nueva si todavia no existe"
                 className={inputClassName()}
+              />
+            </Field>
+
+            <Field label="Archivos o apuntes opcionales">
+              <select
+                multiple
+                value={selectedFileIds}
+                onChange={(event) =>
+                  setSelectedFileIds(
+                    Array.from(event.target.selectedOptions, (option) => option.value),
+                  )}
+                className={inputClassName("min-h-44")}
               >
-                <option value="">Sin archivo</option>
                 {filteredDocuments.map((document) => (
                   <option key={document.id} value={document.id}>
                     {document.title}
@@ -268,19 +391,42 @@ export default function ChatPage() {
               </select>
             </Field>
 
-            {selectedFile ? (
+            <Field label="Cargar archivo desde aca">
+              <input
+                type="file"
+                multiple
+                onChange={handleInlineUpload}
+                disabled={uploadingFile}
+                className={inputClassName("pt-2")}
+              />
+            </Field>
+            <p className="text-xs text-slate-500">
+              Podes seleccionar varios archivos manteniendo `Ctrl` o `Cmd`.
+            </p>
+
+            {selectedFiles.length ? (
               <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                {selectedFile.extractedText?.trim()
-                  ? "Este chat usara el texto extraido del PDF como contexto."
-                  : selectedFile.sourceText?.trim()
-                    ? "Este chat usara el apunte manual guardado como contexto."
-                  : "Ese archivo todavía no tiene texto disponible para el chat."}
+                <p className="font-medium text-slate-900">
+                  {selectedFiles.length} archivo(s) seleccionado(s)
+                </p>
+                <div className="mt-2 space-y-2">
+                  {selectedFiles.map((selectedFile) => (
+                    <p key={selectedFile.id}>
+                      <span className="font-medium">{selectedFile.title}:</span>{" "}
+                      {hasExtractedText(selectedFile)
+                        ? "se usara el texto extraido como contexto."
+                        : selectedFile.sourceText?.trim()
+                          ? "se usara el apunte manual guardado como contexto."
+                          : "todavia no tiene texto disponible para el chat."}
+                    </p>
+                  ))}
+                </div>
               </div>
             ) : null}
 
-            {selectedFile && !canUsePdfChat ? (
+            {selectedFiles.length && !canUsePdfChat ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                El chat con PDF requiere el plan Pro.
+                El chat con archivos requiere el plan Pro.
               </div>
             ) : null}
 
@@ -346,7 +492,7 @@ export default function ChatPage() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">
-                {selectedConversation?.title || "Nueva conversación"}
+                {selectedConversation?.title || "Nueva conversacion"}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
                 Historial reciente y respuestas guardadas por usuario.
@@ -366,7 +512,12 @@ export default function ChatPage() {
           ) : null}
           {!canUseChat && planId !== "expired_trial" ? (
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              Para usar el chat de estudio necesitás el plan Pro.
+              Para usar el chat de estudio necesitas el plan Pro.
+            </div>
+          ) : null}
+          {uploadingFile ? (
+            <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+              Cargando archivo...
             </div>
           ) : null}
 
@@ -399,8 +550,8 @@ export default function ChatPage() {
               ))
             ) : (
               <EmptyState
-                title="Sin mensajes todavía"
-                description="Haz una consulta para crear o continuar esta conversacion."
+                title="Sin mensajes todavia"
+                description="Hace una consulta para crear o continuar esta conversacion."
               />
             )}
           </div>
@@ -411,19 +562,19 @@ export default function ChatPage() {
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 className={inputClassName("min-h-32 resize-y")}
-                placeholder="Preguntá algo sobre una materia, un apunte o un PDF."
+                placeholder="Pregunta algo sobre una materia, un apunte o un archivo."
               />
             </Field>
             <p className="text-xs text-slate-500">
-              No hay búsqueda semántica ni vectorial todavía. Para PDFs largos, el contexto se recorta según tu plan.
+              No hay busqueda semantica ni vectorial todavia. Para archivos largos, el contexto se recorta segun tu plan.
             </p>
             <PrimaryButton
               type="submit"
               disabled={
-                sending ||
-                planId === "expired_trial" ||
-                !canUseChat ||
-                Boolean(selectedFileId && !canUsePdfChat)
+                sending
+                || planId === "expired_trial"
+                || !canUseChat
+                || Boolean(selectedFileIds.length && !canUsePdfChat)
               }
             >
               {sending ? "Enviando..." : "Enviar mensaje"}

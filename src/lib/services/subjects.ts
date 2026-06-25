@@ -47,6 +47,26 @@ export async function getSubjectById(supabase: SupabaseClient, id: string) {
   return data ? mapSubject(data as SubjectRecord) : null;
 }
 
+export async function getSubjectByName(
+  supabase: SupabaseClient,
+  userId: string,
+  name: string,
+) {
+  const normalizedName = name.trim();
+  if (!normalizedName) return null;
+
+  const { data, error } = await supabase
+    .from("subjects")
+    .select("*")
+    .eq("user_id", userId)
+    .ilike("name", normalizedName)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapSubject(data as SubjectRecord) : null;
+}
+
 export async function createSubject(
   supabase: SupabaseClient,
   userId: string,

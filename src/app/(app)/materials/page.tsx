@@ -11,10 +11,11 @@ import {
   inputClassName,
   textareaClassName,
 } from "@/components/forms";
+import { MarkdownContent } from "@/components/markdown-content";
 import { PageHeader } from "@/components/page-header";
 import { useAppData } from "@/hooks/use-app-data";
 import { exportMaterialToPdf } from "@/lib/pdf";
-import { formatDate, truncateText } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { StudyMaterial } from "@/types";
 
 export default function MaterialsPage() {
@@ -90,9 +91,19 @@ export default function MaterialsPage() {
                       <p className="mt-1 text-sm text-slate-500">
                         {subject?.name || "Sin materia"} - {formatDate(material.createdAt)}
                       </p>
-                      <p className="mt-3 text-sm leading-6 text-slate-600">
-                        {truncateText(material.content, 240)}
-                      </p>
+                      {material.imageUrl ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={material.imageUrl}
+                            alt={`Imagen explicativa de ${material.title}`}
+                            className="mt-4 aspect-[4/3] w-full max-w-xl rounded-3xl border border-slate-200 object-cover"
+                          />
+                        </>
+                      ) : null}
+                      <div className="mt-4 max-h-72 overflow-hidden rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                        <MarkdownContent content={material.content} compact />
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <SecondaryButton type="button" onClick={() => setEditing(material)}>

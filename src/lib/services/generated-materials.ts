@@ -1,8 +1,23 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
+import { getSignedStudyFileUrl } from "@/lib/services/storage-files";
 import { GeneratedMaterialRecord, StudyMaterial } from "@/types";
 
-function mapGeneratedMaterial(record: GeneratedMaterialRecord): StudyMaterial {
+async function mapGeneratedMaterial(
+  supabase: SupabaseClient,
+  record: GeneratedMaterialRecord,
+): Promise<StudyMaterial> {
+  const imagePath = record.image_path || undefined;
+  let imageUrl: string | undefined;
+
+  if (imagePath) {
+    try {
+      imageUrl = await getSignedStudyFileUrl(supabase, imagePath);
+    } catch {
+      imageUrl = undefined;
+    }
+  }
+
   return {
     id: record.id,
     userId: record.user_id,
@@ -13,6 +28,9 @@ function mapGeneratedMaterial(record: GeneratedMaterialRecord): StudyMaterial {
     detailLevel: record.detail_level || "medium",
     style: record.style || "simple",
     content: record.content,
+    imageUrl,
+    imagePath,
+    imagePrompt: record.image_prompt || undefined,
     createdAt: record.created_at,
   };
 }
@@ -24,8 +42,10 @@ export async function getAllGeneratedMaterials(supabase: SupabaseClient) {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data || []).map((entry) =>
-    mapGeneratedMaterial(entry as GeneratedMaterialRecord),
+  return Promise.all(
+    (data || []).map((entry) =>
+      mapGeneratedMaterial(supabase, entry as GeneratedMaterialRecord),
+    ),
   );
 }
 
@@ -37,7 +57,9 @@ export async function getGeneratedMaterialById(supabase: SupabaseClient, id: str
     .maybeSingle();
 
   if (error) throw error;
-  return data ? mapGeneratedMaterial(data as GeneratedMaterialRecord) : null;
+  return data
+    ? mapGeneratedMaterial(supabase, data as GeneratedMaterialRecord)
+    : null;
 }
 
 export async function getMaterialsBySubject(supabase: SupabaseClient, subjectId: string) {
@@ -48,8 +70,10 @@ export async function getMaterialsBySubject(supabase: SupabaseClient, subjectId:
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data || []).map((entry) =>
-    mapGeneratedMaterial(entry as GeneratedMaterialRecord),
+  return Promise.all(
+    (data || []).map((entry) =>
+      mapGeneratedMaterial(supabase, entry as GeneratedMaterialRecord),
+    ),
   );
 }
 
@@ -61,8 +85,10 @@ export async function getMaterialsByFile(supabase: SupabaseClient, fileId: strin
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data || []).map((entry) =>
-    mapGeneratedMaterial(entry as GeneratedMaterialRecord),
+  return Promise.all(
+    (data || []).map((entry) =>
+      mapGeneratedMaterial(supabase, entry as GeneratedMaterialRecord),
+    ),
   );
 }
 
@@ -88,6 +114,8 @@ export async function createGeneratedMaterial(
       style: input.style,
       content: input.content,
       model: input.model || null,
+      image_path: input.imagePath || null,
+      image_prompt: input.imagePrompt || null,
       input_tokens: input.inputTokens || 0,
       output_tokens: input.outputTokens || 0,
       total_tokens: input.totalTokens || 0,
@@ -96,7 +124,7 @@ export async function createGeneratedMaterial(
     .maybeSingle();
 
   if (error) throw error;
-  return mapGeneratedMaterial(data as GeneratedMaterialRecord);
+  return mapGeneratedMaterial(supabase, data as GeneratedMaterialRecord);
 }
 
 export async function updateGeneratedMaterial(
@@ -114,6 +142,8 @@ export async function updateGeneratedMaterial(
       detail_level: input.detailLevel,
       style: input.style,
       content: input.content,
+      image_path: input.imagePath || null,
+      image_prompt: input.imagePrompt || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -121,7 +151,7 @@ export async function updateGeneratedMaterial(
     .maybeSingle();
 
   if (error) throw error;
-  return mapGeneratedMaterial(data as GeneratedMaterialRecord);
+  return mapGeneratedMaterial(supabase, data as GeneratedMaterialRecord);
 }
 
 export async function removeGeneratedMaterial(supabase: SupabaseClient, id: string) {

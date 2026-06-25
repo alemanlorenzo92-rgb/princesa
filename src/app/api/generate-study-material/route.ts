@@ -12,8 +12,12 @@ import {
 } from "@/lib/services/ai-usage";
 import { getAiTrial, getTrialRemaining, updateAiTrialUsage } from "@/lib/services/ai-trial";
 import { getCurrentSubscription, updateSubscriptionPlan } from "@/lib/services/subscription";
+import { createUserActivityLog } from "@/lib/services/user-activity";
 import { createClient } from "@/lib/supabase/server";
-import { generateStudyMaterialWithOpenAi } from "@/lib/server/openai";
+import {
+  generateStudyImageWithOpenAi,
+  generateStudyMaterialWithOpenAi,
+} from "@/lib/server/openai";
 import { GenerateMaterialResponse, StudyMaterialType } from "@/types";
 
 const requestSchema = z.object({
@@ -45,6 +49,7 @@ const requestSchema = z.object({
   detailLevel: z.enum(["low", "medium", "high"]),
   style: z.enum(["simple", "academic", "easy"]),
   subjectName: z.string().trim().min(1, "La materia es obligatoria.").max(120),
+  generateImage: z.boolean().optional().default(false),
 });
 
 function getFeatureFromMaterialType(materialType: StudyMaterialType) {
@@ -123,19 +128,26 @@ export async function POST(request: NextRequest) {
     monthlyUsage,
   });
   const featureKey = getFeatureFromMaterialType(body.materialType);
+  const wantsImage = body.generateImage;
 
   if (aiState.planId === "expired_trial") {
     return buildUpgradeResponse("Tu prueba gratuita de IA ya fue utilizada.");
   }
 
-    if (!canUseFeature(aiState.planId, featureKey)) {
-      if (aiState.planId === "trial") {
-        return buildUpgradeResponse(
-          "Para usar esta funcion necesitas el plan Pro.",
-        );
+  if (!canUseFeature(aiState.planId, featureKey)) {
+    if (aiState.planId === "trial") {
+      return buildUpgradeResponse(
+        "Para usar esta funcion necesitas el plan Pro.",
+      );
       }
 
     return buildUpgradeResponse("Para usar esta funcion necesitas el plan Pro.");
+  }
+
+  if (wantsImage && !canUseFeature(aiState.planId, "low_image_generation")) {
+    return buildUpgradeResponse(
+      "La generacion de imagenes explicativas requiere un plan pago.",
+    );
   }
 
   const estimatedInputTokens = estimateTokens(body.sourceText);
@@ -196,6 +208,23 @@ export async function POST(request: NextRequest) {
       ...body,
       maxOutputTokens,
     });
+    let generatedImage: GenerateMaterialResponse["image"] | undefined;
+    let imageWarning: string | undefined;
+
+    if (wantsImage) {
+      try {
+        generatedImage = await generateStudyImageWithOpenAi({
+          subjectName: body.subjectName,
+          materialType: body.materialType,
+          style: body.style,
+          content: openAiResult.content,
+        });
+      } catch (imageError) {
+        console.error("OpenAI image generation failed", imageError);
+        imageWarning =
+          "El texto se genero bien, pero la imagen explicativa no estuvo disponible esta vez.";
+      }
+    }
 
     if (aiState.planId === "trial") {
       const updatedTrial = await updateAiTrialUsage(
@@ -231,6 +260,21 @@ export async function POST(request: NextRequest) {
       estimatedCostUsd: openAiResult.usage.estimatedCostUsd,
     });
 
+    await createUserActivityLog(supabase, {
+      userId: user.id,
+      action: "material_generated",
+      entityType: "generated_material",
+      title: `Material generado: ${body.subjectName}`,
+      detail: body.materialType,
+      metadata: {
+        subjectName: body.subjectName,
+        materialType: body.materialType,
+        detailLevel: body.detailLevel,
+        style: body.style,
+        generatedImage: Boolean(generatedImage),
+      },
+    });
+
     const [nextSubscription, nextTrial, nextMonthlyUsage] = await Promise.all([
       getCurrentSubscription(supabase, user.id),
       getAiTrial(supabase, user.id),
@@ -248,6 +292,8 @@ export async function POST(request: NextRequest) {
     const responsePayload: GenerateMaterialResponse = {
       content: openAiResult.content,
       mode: "openai",
+      image: generatedImage,
+      imageWarning,
       aiState: nextAiState,
       usage: {
         model: openAiResult.model,

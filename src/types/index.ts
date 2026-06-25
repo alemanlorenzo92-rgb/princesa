@@ -33,8 +33,21 @@ export type UserRole = "student" | "admin";
 export type FeatureKey =
   | StudyMaterialType
   | "ai_chat"
-  | "pdf_chat";
+  | "pdf_chat"
+  | "low_image_generation";
 export type AiMessageRole = "user" | "assistant";
+export type UserActivityAction =
+  | "subject_created"
+  | "subject_deleted"
+  | "file_uploaded"
+  | "file_deleted"
+  | "file_text_extracted"
+  | "material_generated"
+  | "material_saved"
+  | "material_deleted"
+  | "chat_message_sent"
+  | "chat_conversation_created"
+  | "chat_conversation_deleted";
 
 export interface TrialUsage {
   userId: string;
@@ -212,6 +225,8 @@ export interface GeneratedMaterialRecord {
   style: MaterialStyle | null;
   content: string;
   model: string | null;
+  image_path: string | null;
+  image_prompt: string | null;
   input_tokens: number | null;
   output_tokens: number | null;
   total_tokens: number | null;
@@ -239,6 +254,18 @@ export interface AiMessageRecord {
   input_tokens: number | null;
   output_tokens: number | null;
   total_tokens: number | null;
+  created_at: string;
+}
+
+export interface UserActivityLogRecord {
+  id: string;
+  user_id: string;
+  action_key: UserActivityAction;
+  entity_type: string | null;
+  entity_id: string | null;
+  title: string;
+  detail: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -304,6 +331,9 @@ export interface StudyMaterial {
   detailLevel: DetailLevel;
   style: MaterialStyle;
   content: string;
+  imageUrl?: string;
+  imagePath?: string;
+  imagePrompt?: string;
   createdAt: string;
 }
 
@@ -330,16 +360,35 @@ export interface AiMessage {
   createdAt: string;
 }
 
+export interface UserActivityLog {
+  id: string;
+  userId: string;
+  action: UserActivityAction;
+  entityType?: string;
+  entityId?: string;
+  title: string;
+  detail?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface AppDataState {
   subjects: Subject[];
   events: CalendarEvent[];
   documents: StudyDocument[];
   materials: StudyMaterial[];
+  activityLogs: UserActivityLog[];
 }
 
 export interface GenerateMaterialResponse {
   content: string;
   mode: "openai";
+  image?: {
+    dataUrl: string;
+    prompt: string;
+    quality: "low";
+  };
+  imageWarning?: string;
   aiState: AiAccountState;
   usage: {
     model: string;

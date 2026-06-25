@@ -50,13 +50,13 @@ export function buildAcademicChatSystemPrompt() {
 export function buildChatContext({
   planId,
   subject,
-  file,
+  files,
   history,
   currentMessage,
 }: {
   planId: PlanId;
   subject?: Subject | null;
-  file?: StudyDocument | null;
+  files?: StudyDocument[];
   history: AiMessage[];
   currentMessage: string;
 }) {
@@ -78,25 +78,33 @@ export function buildChatContext({
     );
   }
 
-  if (file) {
-    const fileContext = file.extractedText?.trim() || file.sourceText?.trim() || "";
-    if (fileContext) {
-      const truncated = truncateContext(fileContext, limits.maxContextChars);
-      if (truncated.truncated) {
-        contextWarning = "El contexto del PDF fue recortado para respetar los limites de tu plan.";
-      }
+  const usableFiles = (files || []).filter((file) =>
+    Boolean(file.extractedText?.trim() || file.sourceText?.trim()),
+  );
 
-      contextSections.push(
+  if (usableFiles.length) {
+    const rawFileContext = usableFiles
+      .map((file, index) =>
         [
-          "Contexto de archivo:",
+          `Archivo ${index + 1}:`,
           `Titulo: ${file.title}`,
           file.description ? `Descripcion: ${file.description}` : "",
-          truncated.text,
+          file.extractedText?.trim() || file.sourceText?.trim() || "",
         ]
           .filter(Boolean)
           .join("\n"),
-      );
+      )
+      .join("\n\n");
+
+    const truncated = truncateContext(rawFileContext, limits.maxContextChars);
+    if (truncated.truncated) {
+      contextWarning =
+        usableFiles.length === 1
+          ? "El contexto del archivo fue recortado para respetar los limites de tu plan."
+          : "El contexto combinado de los archivos fue recortado para respetar los limites de tu plan.";
     }
+
+    contextSections.push(["Contexto de archivos:", truncated.text].filter(Boolean).join("\n"));
   }
 
   const limitedHistory = history.slice(-limits.maxHistoryMessages);

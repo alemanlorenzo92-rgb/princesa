@@ -160,12 +160,17 @@ create table if not exists public.generated_materials (
   style text,
   content text not null,
   model text,
+  image_path text,
+  image_prompt text,
   input_tokens integer not null default 0,
   output_tokens integer not null default 0,
   total_tokens integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.generated_materials add column if not exists image_path text;
+alter table public.generated_materials add column if not exists image_prompt text;
 
 create table if not exists public.ai_conversations (
   id uuid primary key default gen_random_uuid(),
@@ -187,6 +192,18 @@ create table if not exists public.ai_messages (
   input_tokens integer not null default 0,
   output_tokens integer not null default 0,
   total_tokens integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.user_activity_logs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  action_key text not null,
+  entity_type text,
+  entity_id uuid,
+  title text not null,
+  detail text,
+  metadata jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -323,6 +340,7 @@ alter table public.study_files enable row level security;
 alter table public.generated_materials enable row level security;
 alter table public.ai_conversations enable row level security;
 alter table public.ai_messages enable row level security;
+alter table public.user_activity_logs enable row level security;
 alter table public.billing_events enable row level security;
 alter table public.push_subscriptions enable row level security;
 
@@ -467,6 +485,19 @@ for insert with check (auth.uid() = user_id);
 create policy "ai_messages_update_own" on public.ai_messages
 for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "ai_messages_delete_own" on public.ai_messages
+for delete using (auth.uid() = user_id);
+
+drop policy if exists "user_activity_logs_select_own" on public.user_activity_logs;
+drop policy if exists "user_activity_logs_insert_own" on public.user_activity_logs;
+drop policy if exists "user_activity_logs_update_own" on public.user_activity_logs;
+drop policy if exists "user_activity_logs_delete_own" on public.user_activity_logs;
+create policy "user_activity_logs_select_own" on public.user_activity_logs
+for select using (auth.uid() = user_id);
+create policy "user_activity_logs_insert_own" on public.user_activity_logs
+for insert with check (auth.uid() = user_id);
+create policy "user_activity_logs_update_own" on public.user_activity_logs
+for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "user_activity_logs_delete_own" on public.user_activity_logs
 for delete using (auth.uid() = user_id);
 
 drop policy if exists "billing_events_select_own" on public.billing_events;

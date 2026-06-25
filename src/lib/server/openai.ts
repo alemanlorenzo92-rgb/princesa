@@ -13,6 +13,7 @@ interface GenerateStudyMaterialInput {
 }
 
 const DEFAULT_MODEL = "gpt-4.1-mini";
+const DEFAULT_IMAGE_MODEL = "gpt-image-1";
 
 function buildMaterialTypeInstruction(type: StudyMaterialType) {
   const labels: Record<StudyMaterialType, string> = {
@@ -88,11 +89,13 @@ export function buildStudyMaterialPrompt({
     `Genera ${buildMaterialTypeInstruction(materialType)}.`,
     buildDetailInstruction(detailLevel),
     buildStyleInstruction(style),
-    "Organiza la respuesta con titulos y subtitulos claros cuando tenga sentido.",
+    "Devuelve la respuesta en Markdown claro y agradable de leer.",
+    "Usa titulos, subtitulos, listas, tablas y destacados solo cuando ayuden a estudiar mejor.",
+    "Prioriza una presentacion visual prolija, escaneable y util para repaso.",
     "No inventes informacion que no aparezca en el contenido base.",
     "Si faltan datos importantes, indicalo de forma explicita.",
     "No menciones que eres una IA ni expliques tu proceso interno.",
-    "Devuelve texto limpio, listo para mostrar dentro de una aplicacion web de estudio.",
+    "Evita relleno y conserva solo contenido util para el estudiante.",
   ].join(" ");
 }
 
@@ -216,5 +219,53 @@ export async function generateChatReplyWithOpenAi({
       totalTokens,
       estimatedCostUsd: Number(estimatedCostUsd.toFixed(6)),
     },
+  };
+}
+
+export async function generateStudyImageWithOpenAi({
+  subjectName,
+  materialType,
+  style,
+  content,
+}: {
+  subjectName: string;
+  materialType: StudyMaterialType;
+  style: MaterialStyle;
+  content: string;
+}) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY no esta configurada en el servidor.");
+  }
+
+  const client = new OpenAI({ apiKey });
+  const prompt = [
+    "Create a clean educational illustration for a student study app.",
+    `Subject: ${subjectName}.`,
+    `Material type: ${materialType}.`,
+    `Tone: ${style}.`,
+    "Make it visually clear, modern, and explanatory.",
+    "Prefer one strong central concept, simple labels, arrows, sections, and academic infographic style.",
+    "Do not include watermarks, app chrome, or excessive text blocks.",
+    "Use Spanish labels only if labels are needed.",
+    `Base study content: ${content.slice(0, 2500)}`,
+  ].join(" ");
+
+  const result = await client.images.generate({
+    model: process.env.OPENAI_IMAGE_MODEL || DEFAULT_IMAGE_MODEL,
+    prompt,
+    quality: "low",
+    size: "1024x1024",
+  });
+
+  const imageBase64 = result.data?.[0]?.b64_json;
+  if (!imageBase64) {
+    throw new Error("OpenAI no devolvio una imagen util.");
+  }
+
+  return {
+    prompt,
+    dataUrl: `data:image/png;base64,${imageBase64}`,
+    quality: "low" as const,
   };
 }

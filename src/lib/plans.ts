@@ -58,6 +58,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       "flashcards",
       "study_guide",
       "pdf_chat",
+      "low_image_generation",
     ],
   },
   pro: {
@@ -85,6 +86,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       "glossary",
       "timeline",
       "pdf_chat",
+      "low_image_generation",
     ],
   },
   expired_trial: {

@@ -20,14 +20,16 @@ import { createMessage, getMessages } from "@/lib/services/ai-messages";
 import { getAiTrial, getTrialRemaining, updateAiTrialUsage } from "@/lib/services/ai-trial";
 import { getStudyFileById } from "@/lib/services/study-files";
 import { getCurrentSubscription, updateSubscriptionPlan } from "@/lib/services/subscription";
+import { createUserActivityLog } from "@/lib/services/user-activity";
 import { getSubjectById } from "@/lib/services/subjects";
 import { createClient } from "@/lib/supabase/server";
-import { SendChatMessageResponse } from "@/types";
+import { SendChatMessageResponse, StudyDocument } from "@/types";
 
 const requestSchema = z.object({
   conversationId: z.string().uuid().optional(),
   subjectId: z.string().uuid().optional(),
   fileId: z.string().uuid().optional(),
+  fileIds: z.array(z.string().uuid()).optional(),
   message: z.string().trim().min(1, "El mensaje no puede estar vacio.").max(8_000),
 });
 
@@ -39,6 +41,12 @@ function buildUpgradeResponse(message: string, status = 403) {
     },
     { status },
   );
+}
+
+function isStudyDocument(
+  file: StudyDocument | null,
+): file is StudyDocument {
+  return Boolean(file);
 }
 
 export async function POST(request: NextRequest) {
@@ -111,9 +119,15 @@ export async function POST(request: NextRequest) {
     return buildUpgradeResponse("Para usar el chat de estudio necesitás el plan Pro.");
   }
 
-  const [subject, file] = await Promise.all([
+  const requestedFileIds = Array.from(
+    new Set([...(body.fileIds || []), ...(body.fileId ? [body.fileId] : [])]),
+  );
+
+  const [subject, files] = await Promise.all([
     body.subjectId ? getSubjectById(supabase, body.subjectId) : Promise.resolve(null),
-    body.fileId ? getStudyFileById(supabase, body.fileId) : Promise.resolve(null),
+    requestedFileIds.length
+      ? Promise.all(requestedFileIds.map((fileId) => getStudyFileById(supabase, fileId)))
+      : Promise.resolve([]),
   ]);
 
   if (body.subjectId && (!subject || subject.userId !== user.id)) {
@@ -123,25 +137,27 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (body.fileId && (!file || file.userId !== user.id)) {
+  if (files.some((file) => !file || file.userId !== user.id)) {
     return NextResponse.json(
-      { error: "No tenes permiso para acceder a este archivo." },
+      { error: "No tenes permiso para acceder a uno de los archivos seleccionados." },
       { status: 403 },
     );
   }
 
-  if (file && !canUseFeature(aiState.planId, "pdf_chat")) {
+  const validFiles = files.filter(isStudyDocument);
+
+  if (validFiles.length && !canUseFeature(aiState.planId, "pdf_chat")) {
     return NextResponse.json(
       { error: "Este chat con archivos esta disponible en planes pagos." },
       { status: 403 },
     );
   }
 
-  if (file && !file.extractedText?.trim() && !file.sourceText?.trim()) {
+  if (validFiles.some((file) => !file.extractedText?.trim() && !file.sourceText?.trim())) {
     return NextResponse.json(
       {
         error:
-          "Ese archivo todavia no tiene texto disponible para el chat. Extrae el texto o usa un apunte manual.",
+          "Uno de los archivos seleccionados todavia no tiene texto disponible para el chat. Extrae el texto o usa un apunte manual.",
       },
       { status: 400 },
     );
@@ -161,13 +177,13 @@ export async function POST(request: NextRequest) {
   if (!conversation) {
     conversation = await createConversation(supabase, user.id, {
       subjectId: subject?.id,
-      fileId: file?.id,
+      fileId: validFiles[0]?.id,
       title: buildChatConversationTitle(body.message),
     });
-  } else if (body.subjectId || body.fileId) {
+  } else if (body.subjectId || requestedFileIds.length) {
     conversation = await updateConversation(supabase, conversation.id, {
       subjectId: subject?.id,
-      fileId: file?.id,
+      fileId: validFiles[0]?.id,
     });
   }
 
@@ -182,7 +198,7 @@ export async function POST(request: NextRequest) {
   const context = buildChatContext({
     planId: aiState.planId,
     subject,
-    file,
+    files: validFiles,
     history: previousMessages,
     currentMessage: body.message,
   });
@@ -192,7 +208,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          file && aiState.planId === "trial"
+          validFiles.length && aiState.planId === "trial"
             ? "El contexto del archivo es demasiado largo para tu plan."
             : "No tenes tokens suficientes para enviar este mensaje.",
       },
@@ -272,7 +288,7 @@ export async function POST(request: NextRequest) {
           ? buildChatConversationTitle(body.message)
           : conversation.title,
       subjectId: subject?.id,
-      fileId: file?.id,
+      fileId: validFiles[0]?.id,
     });
 
     if (aiState.planId === "trial") {
@@ -301,12 +317,28 @@ export async function POST(request: NextRequest) {
     await insertAiUsageLog(supabase, {
       userId: user.id,
       planId: aiState.planId,
-      featureKey: file ? "pdf_chat" : "ai_chat",
-      materialType: file ? "pdf_chat" : "ai_chat",
+      featureKey: validFiles.length ? "pdf_chat" : "ai_chat",
+      materialType: validFiles.length ? "pdf_chat" : "ai_chat",
       model: openAiResult.model,
       inputTokens: openAiResult.usage.inputTokens,
       outputTokens: openAiResult.usage.outputTokens,
       estimatedCostUsd: openAiResult.usage.estimatedCostUsd,
+    });
+
+    await createUserActivityLog(supabase, {
+      userId: user.id,
+      action: "chat_message_sent",
+      entityType: "conversation",
+      entityId: conversation.id,
+      title: subject?.name
+        ? `Pregunta enviada sobre ${subject.name}`
+        : "Pregunta enviada al chat de estudio",
+      detail: body.message.slice(0, 180),
+      metadata: {
+        subjectId: subject?.id || null,
+        fileIds: validFiles.map((file) => file.id),
+        model: openAiResult.model,
+      },
     });
 
     const [nextSubscription, nextTrial, nextMonthlyUsage] = await Promise.all([

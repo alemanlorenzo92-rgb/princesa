@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -13,6 +13,7 @@ import {
   inputClassName,
   textareaClassName,
 } from "@/components/forms";
+import { MarkdownContent } from "@/components/markdown-content";
 import { PageHeader } from "@/components/page-header";
 import { useAppData } from "@/hooks/use-app-data";
 import { useAuth } from "@/hooks/use-auth";
@@ -30,9 +31,17 @@ import {
 } from "@/lib/constants";
 import { exportMaterialToPdf } from "@/lib/pdf";
 import { hasExtractedText } from "@/lib/services/study-files";
+import { validateStudyFile } from "@/lib/services/storage-files";
 import { canUseFeature, getPlanConfig, isPaidPlan } from "@/lib/plans";
+import { canExtractTextFromStudyFile } from "@/lib/study-file-config";
 import { formatDate } from "@/lib/utils";
-import { GenerateMaterialResponse } from "@/types";
+import { GenerateMaterialResponse, StudyDocument } from "@/types";
+
+function isStudyDocument(
+  document: StudyDocument | undefined,
+): document is StudyDocument {
+  return Boolean(document);
+}
 
 export default function AiPage() {
   const searchParams = useSearchParams();
@@ -40,6 +49,8 @@ export default function AiPage() {
   const {
     subjects,
     documents,
+    addDocument,
+    ensureSubject,
     generateMaterial,
     saveMaterial,
     extractDocumentText,
@@ -47,6 +58,11 @@ export default function AiPage() {
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [lastUsageMessage, setLastUsageMessage] = useState("");
+  const [saveFeedback, setSaveFeedback] = useState("");
+  const [imageWarning, setImageWarning] = useState("");
+  const [generatedImage, setGeneratedImage] = useState<GenerateMaterialResponse["image"] | null>(
+    null,
+  );
   const [resultMeta, setResultMeta] = useState<{
     title: string;
     subjectId: string;
@@ -54,16 +70,18 @@ export default function AiPage() {
     type: (typeof MATERIAL_TYPE_OPTIONS)[number]["value"];
     detailLevel: (typeof DETAIL_LEVEL_OPTIONS)[number]["value"];
     style: (typeof STYLE_OPTIONS)[number]["value"];
+    imagePrompt?: string;
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [lastUsage, setLastUsage] = useState<GenerateMaterialResponse["usage"] | null>(null);
-  const [saveFeedback, setSaveFeedback] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState(
     searchParams.get("subjectId") || "",
   );
-  const [selectedDocumentId, setSelectedDocumentId] = useState(
-    searchParams.get("documentId") || "",
+  const [subjectNameInput, setSubjectNameInput] = useState("");
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>(
+    searchParams.get("documentId") ? [searchParams.get("documentId") || ""] : [],
   );
   const [documentNotice, setDocumentNotice] = useState("");
   const [extractingDocumentId, setExtractingDocumentId] = useState<string | null>(null);
@@ -71,32 +89,124 @@ export default function AiPage() {
   const aiState = user?.aiState;
   const planId = aiState?.planId || "expired_trial";
   const planConfig = getPlanConfig(planId);
-  const remainingTrial = aiState ? getRemainingTrialTokens(aiState) : null;
-  const remainingMonthly = aiState ? getRemainingMonthlyTokens(aiState) : null;
-  const monthlyUsage = aiState ? getCurrentMonthlyUsage(aiState) : null;
-  const isBlocked = planId === "expired_trial";
-
   const availableFeatures = useMemo(
     () => new Set(planConfig.features),
     [planConfig.features],
   );
-  const linkedDocument = documents.find((entry) => entry.id === selectedDocumentId);
+  const remainingTrial = aiState ? getRemainingTrialTokens(aiState) : null;
+  const remainingMonthly = aiState ? getRemainingMonthlyTokens(aiState) : null;
+  const monthlyUsage = aiState ? getCurrentMonthlyUsage(aiState) : null;
+  const isBlocked = planId === "expired_trial";
+  const canGenerateImages = availableFeatures.has("low_image_generation");
+  const linkedDocuments = selectedDocumentIds
+    .map((documentId) => documents.find((entry) => entry.id === documentId))
+    .filter(isStudyDocument);
   const subjectDocuments = selectedSubjectId
     ? documents.filter((entry) => entry.subjectId === selectedSubjectId)
     : documents;
 
+  async function resolveSubject() {
+    if (selectedSubjectId) {
+      const selected = subjects.find((entry) => entry.id === selectedSubjectId);
+      return {
+        subjectId: selectedSubjectId,
+        subjectName: selected?.name || subjectNameInput.trim(),
+      };
+    }
+
+    if (!subjectNameInput.trim()) {
+      return { subjectId: "", subjectName: "" };
+    }
+
+    const ensuredSubject = await ensureSubject(subjectNameInput);
+    if (!ensuredSubject) {
+      return { subjectId: "", subjectName: subjectNameInput.trim() };
+    }
+
+    setSelectedSubjectId(ensuredSubject.id);
+    setSubjectNameInput(ensuredSubject.name);
+    return {
+      subjectId: ensuredSubject.id,
+      subjectName: ensuredSubject.name,
+    };
+  }
+
+  async function handleInlineUpload(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    try {
+      setUploadingFile(true);
+      setError("");
+      setDocumentNotice("");
+      const subject = await resolveSubject();
+      const createdIds: string[] = [];
+
+      for (const file of files) {
+        validateStudyFile(file);
+
+        const createdDocument = await addDocument({
+          subjectId: subject.subjectId,
+          title: file.name.replace(/\.[^.]+$/, "") || file.name,
+          description: "Archivo cargado desde el generador de IA.",
+          sourceText: "",
+          extractedText: "",
+          uploadedFile: file,
+        });
+
+        if (!createdDocument) {
+          throw new Error("No se pudo guardar uno de los archivos.");
+        }
+
+        createdIds.push(createdDocument.id);
+
+        if (
+          createdDocument.filePath
+          && canExtractTextFromStudyFile({
+            fileName: createdDocument.fileName,
+            fileType: createdDocument.fileType,
+          })
+        ) {
+          await extractDocumentText(createdDocument.id);
+        }
+      }
+
+      setSelectedDocumentIds((current) => Array.from(new Set([...current, ...createdIds])));
+      setDocumentNotice(
+        files.length === 1
+          ? "Archivo cargado correctamente."
+          : `${files.length} archivos cargados correctamente.`,
+      );
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "No se pudo cargar el archivo desde esta pantalla.",
+      );
+    } finally {
+      setUploadingFile(false);
+      event.target.value = "";
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const subjectId = selectedSubjectId || String(formData.get("subjectId") || "");
-    const documentId = selectedDocumentId || String(formData.get("documentId") || "");
     const manualText = String(formData.get("manualText") || "");
     const title = String(formData.get("title") || "");
     const type = String(formData.get("type") || "short_summary") as (typeof MATERIAL_TYPE_OPTIONS)[number]["value"];
     const detailLevel = String(formData.get("detailLevel") || "medium") as (typeof DETAIL_LEVEL_OPTIONS)[number]["value"];
     const style = String(formData.get("style") || "simple") as (typeof STYLE_OPTIONS)[number]["value"];
-    const sourceText =
-      manualText.trim() || linkedDocument?.extractedText || linkedDocument?.sourceText || "";
+    const generateImage = formData.get("generateImage") === "on";
+    const documentSourceText = linkedDocuments
+      .map((document) => {
+        const content = document.extractedText?.trim() || document.sourceText?.trim() || "";
+        return content ? [`Archivo: ${document.title}`, content].join("\n") : "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
+    const sourceText = manualText.trim() || documentSourceText;
+    const subject = await resolveSubject();
 
     if (isBlocked) {
       setError("Tu prueba gratuita termino. Mejora tu plan para seguir usando IA.");
@@ -104,11 +214,17 @@ export default function AiPage() {
       return;
     }
 
+    if (!subject.subjectName.trim()) {
+      setError("Elegi una materia o escribi una nueva para crearla automaticamente.");
+      setResult("");
+      return;
+    }
+
     if (!sourceText.trim()) {
       setError(
-        linkedDocument?.filePath
-          ? "Ese PDF todavia no tiene texto extraido. Para seguir con IA, sube al plan Pro o extraelo primero y volve a intentar."
-          : "No hay texto suficiente. Pega contenido o elige un archivo con texto asociado.",
+        linkedDocuments.length
+          ? "Los archivos seleccionados todavia no tienen texto util. Extraelos primero o pega texto manual."
+          : "No hay texto suficiente. Pega contenido o elige uno o mas archivos con texto asociado.",
       );
       setResult("");
       return;
@@ -134,11 +250,7 @@ export default function AiPage() {
     }
 
     if (!canUseFeature(planId, type)) {
-      setError(
-        planId === "trial"
-          ? "Para usar esta funcion necesitas el plan Pro."
-          : "Para usar esta funcion necesitas el plan Pro.",
-      );
+      setError("Para usar esta funcion necesitas el plan Pro.");
       setResult("");
       return;
     }
@@ -148,32 +260,41 @@ export default function AiPage() {
       setError("");
       setLastUsageMessage("");
       setSaveFeedback("");
+      setImageWarning("");
       const response = await generateMaterial({
-        subjectId,
-        documentId: documentId || undefined,
+        subjectId: subject.subjectId || undefined,
+        subjectName: subject.subjectName,
+        documentId: selectedDocumentIds[0] || undefined,
+        documentIds: selectedDocumentIds,
         sourceText,
         materialType: type,
         detailLevel,
         style,
+        generateImage,
       });
       setResult(response.content);
+      setGeneratedImage(response.image || null);
+      setImageWarning(response.imageWarning || "");
       setLastUsageMessage(
         `Uso registrado: ${response.usage.inputTokens} tokens de entrada, ${response.usage.outputTokens} de salida, modelo ${response.usage.model}.`,
       );
       setLastUsage(response.usage);
       setResultMeta({
         title,
-        subjectId,
-        documentId: documentId || undefined,
+        subjectId: subject.subjectId,
+        documentId: selectedDocumentIds[0] || undefined,
         type,
         detailLevel,
         style,
+        imagePrompt: response.image?.prompt,
       });
     } catch (generationError) {
       setResult("");
       setResultMeta(null);
       setLastUsageMessage("");
       setLastUsage(null);
+      setGeneratedImage(null);
+      setImageWarning("");
       setError(
         generationError instanceof Error
           ? generationError.message
@@ -185,16 +306,20 @@ export default function AiPage() {
   }
 
   async function handleExtractCurrentDocument() {
-    if (!selectedDocumentId) return;
+    if (!selectedDocumentIds.length) return;
 
     try {
-      setExtractingDocumentId(selectedDocumentId);
+      setExtractingDocumentId(selectedDocumentIds[0]);
       setDocumentNotice("");
-      const result = await extractDocumentText(selectedDocumentId);
+      let totalCharacters = 0;
+
+      for (const documentId of selectedDocumentIds) {
+        const result = await extractDocumentText(documentId);
+        totalCharacters += result.extractedTextLength;
+      }
+
       setDocumentNotice(
-        result.warning
-          ? result.warning
-          : `Texto extraido correctamente. ${result.extractedTextLength} caracteres listos para IA.`,
+        `Texto extraido correctamente de ${selectedDocumentIds.length} archivo(s). ${totalCharacters} caracteres listos para IA.`,
       );
     } catch (extractError) {
       setDocumentNotice(
@@ -225,6 +350,8 @@ export default function AiPage() {
         inputTokens: lastUsage?.inputTokens,
         outputTokens: lastUsage?.outputTokens,
         totalTokens: lastUsage?.totalTokens,
+        imageDataUrl: generatedImage?.dataUrl,
+        imagePrompt: resultMeta.imagePrompt,
       });
       setSaveFeedback("Material guardado correctamente.");
     } catch (saveError) {
@@ -243,7 +370,7 @@ export default function AiPage() {
     const subject = subjects.find((entry) => entry.id === resultMeta.subjectId);
     exportMaterialToPdf({
       appName: "EstudioAI",
-      subjectName: subject?.name || "Materia sin nombre",
+      subjectName: subject?.name || subjectNameInput || "Materia sin nombre",
       title: resultMeta.title,
       createdAt: formatDate(new Date().toISOString()),
       content: result,
@@ -255,25 +382,23 @@ export default function AiPage() {
       <PageHeader
         eyebrow="IA"
         title="Generador de material de estudio"
-        description="Elegí una materia, un archivo o texto propio y generá material con el plan activo."
+        description="Elegi una materia, crea una nueva si hace falta, subi archivos desde aca y genera material con tu plan activo."
       />
 
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
         <CardSection>
           <p className="text-sm text-slate-500">
-            {planId === "trial"
-              ? "Prueba gratuita de IA"
-              : planConfig.label}
+            {planId === "trial" ? "Prueba gratuita de IA" : planConfig.label}
           </p>
           <p className="mt-2 text-2xl font-semibold text-slate-950">
-            {planId === "expired_trial" ? "Tu prueba gratuita terminó" : planConfig.label}
+            {planId === "expired_trial" ? "Tu prueba gratuita termino" : planConfig.label}
           </p>
           <p className="mt-3 text-sm text-slate-600">
             {planId === "trial"
-              ? "La prueba gratuita se entrega una sola vez, se consume progresivamente y no se renueva."
+              ? "La prueba gratuita se entrega una sola vez y se consume progresivamente."
               : planId === "expired_trial"
-                ? "Ya no tenés IA disponible sin un plan pago."
-                : "Tus límites de IA se renuevan mensualmente mientras el plan esté activo."}
+                ? "Ya no tenes IA disponible sin un plan pago."
+                : "Tus limites de IA se renuevan mensualmente mientras el plan este activo."}
           </p>
           {planId === "expired_trial" ? (
             <Link
@@ -313,15 +438,12 @@ export default function AiPage() {
               <p className="mt-2 text-sm text-slate-500">
                 Restantes: {remainingMonthly.inputRemaining} entrada - {remainingMonthly.outputRemaining} salida
               </p>
-              <p className="mt-2 text-sm text-slate-500">
-                Periodo: {monthlyUsage?.month || new Date().toISOString().slice(0, 7)}
-              </p>
             </>
           ) : null}
         </CardSection>
 
         <CardSection>
-            <p className="text-sm text-slate-500">Funciones disponibles</p>
+          <p className="text-sm text-slate-500">Funciones disponibles</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {planConfig.features.length ? (
               planConfig.features.map((feature) => (
@@ -337,33 +459,34 @@ export default function AiPage() {
             )}
           </div>
           <p className="mt-4 text-sm text-slate-500">
-            Máximo por request: {planConfig.requestInputTokensLimit} tokens de entrada y {planConfig.requestOutputTokensLimit} de salida.
+            Maximo por request: {planConfig.requestInputTokensLimit} tokens de entrada y {planConfig.requestOutputTokensLimit} de salida.
           </p>
         </CardSection>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <CardSection>
-          <h2 className="text-lg font-semibold text-slate-950">Configurar generación</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Configurar generacion</h2>
           <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
-            <Field label="Título del material">
+            <Field label="Titulo del material">
               <input name="title" required placeholder="Resumen parcial unidad 2" className={inputClassName()} />
             </Field>
-            <Field label="Materia">
+            <Field label="Materia existente">
               <select
                 name="subjectId"
-                required
                 value={selectedSubjectId}
                 onChange={(event) => {
                   setSelectedSubjectId(event.target.value);
-                  setSelectedDocumentId("");
+                  const selected = subjects.find((subject) => subject.id === event.target.value);
+                  if (selected) {
+                    setSubjectNameInput(selected.name);
+                  }
+                  setSelectedDocumentIds([]);
                   setDocumentNotice("");
                 }}
                 className={inputClassName()}
               >
-                <option value="" disabled>
-                  Seleccionar materia
-                </option>
+                <option value="">Sin materia seleccionada</option>
                 {subjects.map((subject) => (
                   <option key={subject.id} value={subject.id}>
                     {subject.name}
@@ -371,17 +494,26 @@ export default function AiPage() {
                 ))}
               </select>
             </Field>
-            <Field label="Archivo asociado opcional">
+            <Field label="Nombre de materia">
+              <input
+                value={subjectNameInput}
+                onChange={(event) => setSubjectNameInput(event.target.value)}
+                placeholder="Escribi una materia nueva si todavia no existe"
+                className={inputClassName()}
+              />
+            </Field>
+            <Field label="Archivos asociados opcionales">
               <select
-                name="documentId"
-                value={selectedDocumentId}
+                multiple
+                value={selectedDocumentIds}
                 onChange={(event) => {
-                  setSelectedDocumentId(event.target.value);
+                  setSelectedDocumentIds(
+                    Array.from(event.target.selectedOptions, (option) => option.value),
+                  );
                   setDocumentNotice("");
                 }}
-                className={inputClassName()}
+                className={textareaClassName("min-h-44")}
               >
-                <option value="">Sin archivo asociado</option>
                 {subjectDocuments.map((document) => (
                   <option key={document.id} value={document.id}>
                     {document.title}
@@ -389,37 +521,61 @@ export default function AiPage() {
                 ))}
               </select>
             </Field>
-            {linkedDocument ? (
+            <Field label="Cargar archivo desde aca">
+              <input
+                type="file"
+                multiple
+                onChange={handleInlineUpload}
+                disabled={uploadingFile}
+                className={inputClassName("pt-2")}
+              />
+            </Field>
+            <p className="text-xs text-slate-500">
+              Podes seleccionar varios archivos manteniendo `Ctrl` o `Cmd`.
+            </p>
+            {linkedDocuments.length ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                <p className="font-medium text-slate-900">{linkedDocument.title}</p>
-                <p className="mt-2">
-                  Prioridad de fuente: texto manual del formulario, luego `extracted_text`, y después `manual_text` del archivo.
+                <p className="font-medium text-slate-900">
+                  {linkedDocuments.length} archivo(s) seleccionado(s)
                 </p>
-                {hasExtractedText(linkedDocument) ? (
-                  <p className="mt-2 text-slate-600">
-                    Texto extraído disponible: {linkedDocument.extractedText?.length || 0} caracteres.
-                  </p>
-                ) : linkedDocument.filePath ? (
-                  <p className="mt-2 text-amber-700">
-                    Este PDF todavía no tiene texto extraído.
-                  </p>
-                ) : null}
-                {!hasExtractedText(linkedDocument) && linkedDocument.sourceText ? (
-                  <p className="mt-2 text-slate-600">
-                    El archivo igual tiene texto manual guardado como alternativa.
-                  </p>
-                ) : null}
+                <p className="mt-2">
+                  Prioridad de fuente: texto manual del formulario, luego `extracted_text`, y despues `manual_text` del archivo.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {linkedDocuments.map((document) => (
+                    <div key={document.id} className="rounded-2xl bg-white px-3 py-3">
+                      <p className="font-medium text-slate-900">{document.title}</p>
+                      {hasExtractedText(document) ? (
+                        <p className="mt-1 text-slate-600">
+                          Texto extraido disponible: {document.extractedText?.length || 0} caracteres.
+                        </p>
+                      ) : document.filePath ? (
+                        <p className="mt-1 text-amber-700">
+                          {canExtractTextFromStudyFile({
+                            fileName: document.fileName,
+                            fileType: document.fileType,
+                          })
+                            ? "Este archivo todavia no tiene texto extraido."
+                            : "Este formato se guardo correctamente, pero no admite extraccion automatica por ahora."}
+                        </p>
+                      ) : null}
+                      {!hasExtractedText(document) && document.sourceText ? (
+                        <p className="mt-1 text-slate-600">
+                          El archivo igual tiene texto manual guardado como alternativa.
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
                 {documentNotice ? <p className="mt-2 text-sky-700">{documentNotice}</p> : null}
-                {linkedDocument.filePath && !hasExtractedText(linkedDocument) ? (
+                {linkedDocuments.some((document) => document.filePath && !hasExtractedText(document)) ? (
                   <SecondaryButton
                     type="button"
                     className="mt-3"
                     onClick={() => void handleExtractCurrentDocument()}
-                    disabled={extractingDocumentId === linkedDocument.id}
+                    disabled={Boolean(extractingDocumentId)}
                   >
-                    {extractingDocumentId === linkedDocument.id
-                      ? "Extrayendo..."
-                      : "Extraer texto del PDF"}
+                    {extractingDocumentId ? "Extrayendo..." : "Extraer texto de los archivos"}
                   </SecondaryButton>
                 ) : null}
               </div>
@@ -427,7 +583,7 @@ export default function AiPage() {
             <Field label="Tipo de material">
               <select name="type" defaultValue="short_summary" className={inputClassName()}>
                 {MATERIAL_TYPE_OPTIONS.map((option) => (
-                <option
+                  <option
                     key={option.value}
                     value={option.value}
                     disabled={!availableFeatures.has(option.value)}
@@ -458,16 +614,35 @@ export default function AiPage() {
                 </select>
               </Field>
             </div>
-              <Field label="Texto base manual">
+            <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                name="generateImage"
+                disabled={!canGenerateImages}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-950"
+              />
+              <span>
+                <span className="block font-medium text-slate-900">
+                  Generar imagen explicativa `low`
+                </span>
+                <span className="mt-1 block text-slate-500">
+                  {canGenerateImages
+                    ? "Crea una ilustracion educativa liviana para acompañar el material."
+                    : "Disponible en planes pagos."}
+                </span>
+              </span>
+            </label>
+            <Field label="Texto base manual">
               <textarea
                 name="manualText"
-                placeholder="Si no elegís archivo, pegá acá el contenido de clase o tus apuntes."
+                placeholder="Si no elegis archivo, pega aca el contenido de clase o tus apuntes."
                 className={textareaClassName("min-h-56")}
               />
             </Field>
             <p className="text-xs text-slate-500">
-              Estimación rápida: aproximadamente 1 token cada 4 caracteres.
+              Estimacion rapida: aproximadamente 1 token cada 4 caracteres.
             </p>
+            {uploadingFile ? <p className="text-sm text-sky-700">Cargando archivo...</p> : null}
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <PrimaryButton type="submit" disabled={loading || isBlocked}>
               {loading ? "Generando..." : isBlocked ? "IA bloqueada" : "Generar material"}
@@ -511,15 +686,30 @@ export default function AiPage() {
                   {saveFeedback}
                 </div>
               ) : null}
-              <pre className="whitespace-pre-wrap rounded-3xl bg-slate-950 p-5 text-sm leading-7 text-slate-50">
-                {result}
-              </pre>
+              {imageWarning ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  {imageWarning}
+                </div>
+              ) : null}
+              {generatedImage ? (
+                <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={generatedImage.dataUrl}
+                    alt="Imagen explicativa generada por IA"
+                    className="aspect-square w-full object-cover"
+                  />
+                </div>
+              ) : null}
+              <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <MarkdownContent content={result} />
+              </div>
             </div>
           ) : (
             <div className="mt-5">
               <EmptyState
-                title="Todavía no generaste material"
-                description="Completá el formulario y obtendrás materiales según el plan y el cupo de IA disponible."
+                title="Todavia no generaste material"
+                description="Completa el formulario y obtendras materiales segun el plan y el cupo de IA disponible."
               />
             </div>
           )}

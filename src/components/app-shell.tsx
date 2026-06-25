@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   CalendarDays,
+  History,
   Home,
   Settings,
   Shield,
@@ -23,6 +24,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { href: "/subjects", label: "Materias", icon: BookOpen },
     { href: "/calendar", label: "Fechas", icon: CalendarDays },
     { href: "/study", label: "Estudio", icon: Sparkles },
+    { href: "/activity", label: "Actividad", icon: History },
     ...(user?.isAdmin
       ? [{ href: "/admin", label: "Admin", icon: Shield }]
       : []),

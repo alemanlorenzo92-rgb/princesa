@@ -6,6 +6,7 @@ const emptyDataState: AppDataState = {
   events: [],
   documents: [],
   materials: [],
+  activityLogs: [],
 };
 
 function readJson<T>(key: string, fallback: T): T {

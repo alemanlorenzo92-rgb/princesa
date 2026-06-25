@@ -36,12 +36,18 @@ import {
   deleteStudyFile,
   uploadStudyFile,
 } from "@/lib/services/storage-files";
+import { uploadGeneratedMaterialImage } from "@/lib/services/generated-material-images";
 import {
   createSubject,
+  getSubjectByName,
   getAllSubjects,
   removeSubject,
   updateSubject as updateSubjectRecord,
 } from "@/lib/services/subjects";
+import {
+  createUserActivityLog,
+  getUserActivityLogs,
+} from "@/lib/services/user-activity";
 import {
   CalendarEvent,
   DetailLevel,
@@ -55,15 +61,19 @@ import {
   StudyMaterial,
   StudyMaterialType,
   Subject,
+  UserActivityLog,
 } from "@/types";
 
 interface StudyMaterialPayload {
-  subjectId: string;
+  subjectId?: string;
+  subjectName: string;
   documentId?: string;
+  documentIds?: string[];
   sourceText: string;
   materialType: StudyMaterialType;
   detailLevel: DetailLevel;
   style: MaterialStyle;
+  generateImage?: boolean;
 }
 
 interface SaveMaterialPayload
@@ -72,6 +82,7 @@ interface SaveMaterialPayload
   inputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;
+  imageDataUrl?: string;
 }
 
 interface StudyDocumentInput
@@ -89,6 +100,7 @@ interface SendChatMessageInput {
   conversationId?: string;
   subjectId?: string;
   fileId?: string;
+  fileIds?: string[];
   message: string;
 }
 
@@ -97,10 +109,12 @@ interface AppDataContextValue {
   events: CalendarEvent[];
   documents: StudyDocument[];
   materials: StudyMaterial[];
+  activityLogs: UserActivityLog[];
   loading: boolean;
   error: string;
   refresh: () => Promise<void>;
-  addSubject: (input: Omit<Subject, "id" | "userId" | "createdAt">) => Promise<void>;
+  addSubject: (input: Omit<Subject, "id" | "userId" | "createdAt">) => Promise<Subject | null>;
+  ensureSubject: (name: string) => Promise<Subject | null>;
   updateSubject: (
     subjectId: string,
     input: Omit<Subject, "id" | "userId" | "createdAt">,
@@ -116,7 +130,7 @@ interface AppDataContextValue {
   deleteEvent: (eventId: string) => Promise<void>;
   addDocument: (
     input: StudyDocumentInput,
-  ) => Promise<void>;
+  ) => Promise<StudyDocument | null>;
   updateDocument: (
     documentId: string,
     input: StudyDocumentInput,
@@ -163,6 +177,7 @@ export function AppDataProvider({
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [documents, setDocuments] = useState<StudyDocument[]>([]);
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
+  const [activityLogs, setActivityLogs] = useState<UserActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -172,6 +187,7 @@ export function AppDataProvider({
       setEvents([]);
       setDocuments([]);
       setMaterials([]);
+      setActivityLogs([]);
       setLoading(false);
       return;
     }
@@ -179,18 +195,20 @@ export function AppDataProvider({
     try {
       setLoading(true);
       setError("");
-      const [nextSubjects, nextEvents, nextDocuments, nextMaterials] =
+      const [nextSubjects, nextEvents, nextDocuments, nextMaterials, nextActivityLogs] =
         await Promise.all([
           getAllSubjects(supabase),
           getAllAcademicEvents(supabase),
           getAllStudyFiles(supabase),
           getAllGeneratedMaterials(supabase),
+          getUserActivityLogs(supabase),
         ]);
 
       setSubjects(nextSubjects);
       setEvents(nextEvents);
       setDocuments(nextDocuments);
       setMaterials(nextMaterials);
+      setActivityLogs(nextActivityLogs);
     } catch (refreshError) {
       setError(
         refreshError instanceof Error
@@ -209,9 +227,43 @@ export function AppDataProvider({
   }, [refresh]);
 
   async function addSubject(input: Omit<Subject, "id" | "userId" | "createdAt">) {
-    if (!user || !supabase) return;
-    await createSubject(supabase, user.id, input);
+    if (!user || !supabase) return null;
+    const subject = await createSubject(supabase, user.id, input);
+    await createUserActivityLog(supabase, {
+      userId: user.id,
+      action: "subject_created",
+      entityType: "subject",
+      entityId: subject.id,
+      title: `Materia creada: ${subject.name}`,
+      detail: subject.description || undefined,
+    });
     await refresh();
+    return subject;
+  }
+
+  async function ensureSubject(name: string) {
+    if (!user || !supabase) return null;
+    const normalizedName = name.trim();
+    if (!normalizedName) return null;
+
+    const localMatch = subjects.find(
+      (subject) => subject.name.trim().toLowerCase() === normalizedName.toLowerCase(),
+    );
+    if (localMatch) return localMatch;
+
+    const existing = await getSubjectByName(supabase, user.id, normalizedName);
+    if (existing) {
+      await refresh();
+      return existing;
+    }
+
+    return addSubject({
+      name: normalizedName,
+      description: "",
+      professor: "",
+      schedule: "",
+      color: "#FF8A65",
+    });
   }
 
   async function updateSubject(
@@ -224,8 +276,16 @@ export function AppDataProvider({
   }
 
   async function deleteSubject(subjectId: string) {
-    if (!supabase) return;
+    if (!user || !supabase) return;
+    const current = subjects.find((subject) => subject.id === subjectId);
     await removeSubject(supabase, subjectId);
+    await createUserActivityLog(supabase, {
+      userId: user.id,
+      action: "subject_deleted",
+      entityType: "subject",
+      entityId: subjectId,
+      title: `Materia eliminada: ${current?.name || "Sin nombre"}`,
+    });
     await refresh();
   }
 
@@ -255,7 +315,7 @@ export function AppDataProvider({
   async function addDocument(
     input: StudyDocumentInput,
   ) {
-    if (!user || !supabase) return;
+    if (!user || !supabase) return null;
     const { uploadedFile, ...documentInput } = input;
     let uploadedFilePath: string | null = null;
     let nextInput: Omit<StudyDocument, "id" | "userId" | "createdAt"> = {
@@ -290,15 +350,23 @@ export function AppDataProvider({
         };
       }
 
-      await createStudyFile(supabase, user.id, nextInput);
+      const createdDocument = await createStudyFile(supabase, user.id, nextInput);
+      await createUserActivityLog(supabase, {
+        userId: user.id,
+        action: "file_uploaded",
+        entityType: "study_file",
+        entityId: createdDocument.id,
+        title: `Archivo guardado: ${createdDocument.title}`,
+        detail: createdDocument.fileName || createdDocument.sourceText?.slice(0, 120) || undefined,
+      });
+      await refresh();
+      return createdDocument;
     } catch (createError) {
       if (uploadedFilePath) {
         await deleteStudyFile(supabase, uploadedFilePath).catch(() => undefined);
       }
       throw createError;
     }
-
-    await refresh();
   }
 
   async function updateDocument(
@@ -313,8 +381,17 @@ export function AppDataProvider({
   }
 
   async function deleteDocument(documentId: string) {
-    if (!supabase) return;
+    if (!user || !supabase) return;
+    const current = documents.find((document) => document.id === documentId);
     await removeStudyFile(supabase, documentId);
+    await createUserActivityLog(supabase, {
+      userId: user.id,
+      action: "file_deleted",
+      entityType: "study_file",
+      entityId: documentId,
+      title: `Archivo eliminado: ${current?.title || "Sin titulo"}`,
+      detail: current?.fileName,
+    });
     await refresh();
   }
 
@@ -325,6 +402,17 @@ export function AppDataProvider({
 
   async function extractDocumentText(documentId: string) {
     const result = await extractTextForStudyFile(documentId);
+    if (user && supabase) {
+      const current = documents.find((document) => document.id === documentId);
+      await createUserActivityLog(supabase, {
+        userId: user.id,
+        action: "file_text_extracted",
+        entityType: "study_file",
+        entityId: documentId,
+        title: `Texto extraido: ${current?.title || "Archivo"}`,
+        detail: result.warning || `${result.extractedTextLength} caracteres disponibles.`,
+      });
+    }
     await refresh();
     return result;
   }
@@ -344,7 +432,15 @@ export function AppDataProvider({
       throw new Error("Necesitas iniciar sesion para crear una conversacion.");
     }
 
-    return createConversation(supabase, user.id, input);
+    const conversation = await createConversation(supabase, user.id, input);
+    await createUserActivityLog(supabase, {
+      userId: user.id,
+      action: "chat_conversation_created",
+      entityType: "conversation",
+      entityId: conversation.id,
+      title: `Conversacion creada: ${conversation.title}`,
+    });
+    return conversation;
   }
 
   async function updateChatConversation(
@@ -356,8 +452,16 @@ export function AppDataProvider({
   }
 
   async function deleteChatConversation(conversationId: string) {
-    if (!supabase) return;
+    if (!user || !supabase) return;
+    const current = await getConversationById(supabase, conversationId);
     await deleteConversationRecord(supabase, conversationId);
+    await createUserActivityLog(supabase, {
+      userId: user.id,
+      action: "chat_conversation_deleted",
+      entityType: "conversation",
+      entityId: conversationId,
+      title: `Conversacion eliminada: ${current?.title || "Sin titulo"}`,
+    });
   }
 
   async function getChatMessages(conversationId: string) {
@@ -385,19 +489,22 @@ export function AppDataProvider({
   }
 
   async function generateMaterial({
-    subjectId,
+    subjectName,
     sourceText,
     materialType,
     detailLevel,
     style,
+    documentIds,
+    generateImage,
   }: StudyMaterialPayload) {
-    const subject = subjects.find((entry) => entry.id === subjectId);
     const payload = {
       sourceText,
       materialType,
       detailLevel,
       style,
-      subjectName: subject?.name || "Materia sin nombre",
+      subjectName,
+      documentIds,
+      generateImage: Boolean(generateImage),
     };
 
     const response = await fetch("/api/generate-study-material", {
@@ -420,8 +527,44 @@ export function AppDataProvider({
 
   async function saveMaterial(input: SaveMaterialPayload) {
     if (!user || !supabase) return;
-    await createGeneratedMaterial(supabase, user.id, input);
-    await refresh();
+    let uploadedImagePath: string | undefined;
+
+    try {
+      let nextInput = { ...input };
+
+      if (input.imageDataUrl) {
+        uploadedImagePath = await uploadGeneratedMaterialImage(
+          supabase,
+          input.imageDataUrl,
+          user.id,
+          input.subjectId || undefined,
+          input.title,
+        );
+
+        nextInput = {
+          ...input,
+          imagePath: uploadedImagePath,
+          imageUrl: undefined,
+        };
+      }
+
+      const material = await createGeneratedMaterial(supabase, user.id, nextInput);
+      await createUserActivityLog(supabase, {
+        userId: user.id,
+        action: "material_saved",
+        entityType: "generated_material",
+        entityId: material.id,
+        title: `Material guardado: ${material.title}`,
+        detail: material.type,
+      });
+      await refresh();
+    } catch (saveError) {
+      if (uploadedImagePath) {
+        await deleteStudyFile(supabase, uploadedImagePath).catch(() => undefined);
+      }
+
+      throw saveError;
+    }
   }
 
   async function updateMaterial(
@@ -434,8 +577,17 @@ export function AppDataProvider({
   }
 
   async function deleteMaterial(materialId: string) {
-    if (!supabase) return;
+    if (!user || !supabase) return;
+    const current = materials.find((material) => material.id === materialId);
     await removeGeneratedMaterial(supabase, materialId);
+    await createUserActivityLog(supabase, {
+      userId: user.id,
+      action: "material_deleted",
+      entityType: "generated_material",
+      entityId: materialId,
+      title: `Material eliminado: ${current?.title || "Sin titulo"}`,
+      detail: current?.type,
+    });
     await refresh();
   }
 
@@ -446,10 +598,12 @@ export function AppDataProvider({
         events,
         documents,
         materials,
+        activityLogs,
         loading,
         error,
         refresh,
         addSubject,
+        ensureSubject,
         updateSubject,
         deleteSubject,
         addEvent,
